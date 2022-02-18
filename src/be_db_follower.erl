@@ -168,3 +168,4 @@ maybe_h3(V) ->
 random_val_predicate(Peer) ->
     not libp2p_peer:is_stale(Peer, timer:minutes(360)) andalso
         maps:get(<<"release_version">>, libp2p_peer:signed_metadata(Peer), undefined) /= undefined.
+ 
