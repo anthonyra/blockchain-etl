@@ -98,10 +98,18 @@ load_block(Conn, Hash, Block, _Sync, Ledger, State = #state{}) ->
         State#state.height + 1,
         "New block must line up with stored height"
     ),
-    %% Seperate the queries to avoid the batches getting too big
+    Start0 = erlang:monotonic_time(millisecond),
     BlockQueries = q_insert_block(Hash, Block, Ledger, State),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Building block queries took ~p ms", [End0 - Start0]),
+    Start1 = erlang:monotonic_time(millisecond),
     ok = ?BATCH_QUERY(Conn, BlockQueries),
+    End1 = erlang:monotonic_time(millisecond),
+    lager:info("Batch query flight time took ~p ms", [End1 - Start1]),
     maybe_write_snapshot(Block, blockchain_worker:blockchain()),
+     %% Seperate the queries to avoid the batches getting too big
+    q_json_transactions(Block, Ledger),
+    q_b64_transactions(Block),
     {ok, State#state{height = BlockHeight}}.
 
 %%
@@ -186,10 +194,12 @@ q_insert_block(Hash, Block, Ledger, State = #state{base_secs = BaseSecs}) ->
             q_insert_transactions(Block, Ledger, State)
     ].
 
+%% Performance tests show this isn't the bottleneck
 q_insert_signatures(Block, #state{}) ->
     Height = blockchain_block_v1:height(Block),
     Signatures = blockchain_block_v1:signatures(Block),
-    lists:map(
+    Start0 = erlang:monotonic_time(millisecond),
+    Map = lists:map(
         fun({Signer, Signature}) ->
             {?S_INSERT_BLOCK_SIG, [
                 Height,
@@ -198,14 +208,18 @@ q_insert_signatures(Block, #state{}) ->
             ]}
         end,
         Signatures
-    ).
+    ),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Mapping signatures of block took ~p ms", [End0 - Start0]),
+    Map.
 
 q_insert_transactions(Block, Ledger, #state{}) ->
     Height = blockchain_block_v1:height(Block),
     Time = blockchain_block_v1:time(Block),
     Txns = blockchain_block_v1:transactions(Block),
     JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
-    be_utils:pmap(
+    Start0 = erlang:monotonic_time(millisecond),
+    Pmap = be_utils:pmap(
         fun(T) ->
             Json = #{type := Type} = be_txn:to_json(T, JsonOpts),
             {?S_INSERT_TXN, [
@@ -217,4 +231,106 @@ q_insert_transactions(Block, Ledger, #state{}) ->
             ]}
         end,
         Txns
-    ).
+    ),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Mapping txns for DB took ~p ms", [End0 - Start0]),
+    Pmap.
+
+q_json_transactions(Block, Ledger) ->
+    Txns = blockchain_block_v1:transactions(Block),
+    JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
+    Start0 = erlang:monotonic_time(millisecond),
+    OGPmap = be_utils:pmap(
+        fun(T) ->
+            be_txn:to_json(T, JsonOpts)
+        end,
+        Txns
+    ),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Mapping only json of txns took ~p ms", [End0 - Start0]),
+    Start1 = erlang:monotonic_time(millisecond),
+    DetailedPmap = be_utils:pmap(
+        fun(L) ->
+            be_txn:to_detailed_json(L, JsonOpts)
+        end,
+        Txns,
+        true
+    ),
+    End1 = erlang:monotonic_time(millisecond),
+    SpeedUp = floor((End0 - Start0) / (End1 - Start1) * 100)/100,
+    lager:info("Detailed mapping txns for DB took ~p ms (~px speedup)", [End1 - Start1, SpeedUp]),
+    SOGPmap = lists:sort(OGPmap),
+    SDPmap = lists:sort(DetailedPmap),
+    case SOGPmap =:= SDPmap of
+        true ->
+            lager:info("Lists Comparison: true");
+        false ->
+            compare_lists(SOGPmap, SDPmap)
+    end.
+
+q_b64_transactions(Block) ->
+    Txns = blockchain_block_v1:transactions(Block),
+    Start0 = erlang:monotonic_time(millisecond),
+    be_utils:pmap(
+        fun(T) ->
+            {
+                ?BIN_TO_B64(blockchain_txn:hash(T))
+            }
+        end,
+        Txns
+    ),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Mapping b64 of txns took ~p ms", [End0 - Start0]).
+
+
+%%TODO - Print different invalid_reasons but continue the comparison
+compare_items(Item1, Item2) ->
+    case is_map(Item1) and is_map(Item2) of
+        true ->
+            compare_maps(maps:iterator(Item1), maps:iterator(Item2));
+        false ->
+            case is_list(Item1) and is_list(Item2) of
+                true ->
+                    compare_lists(lists:sort(Item1), lists:sort(Item2), 1);
+                false ->
+                    case Item1 == Item2 of
+                        true ->
+                            {ok, match};
+                        false ->
+                            lager:info("~p != ~p", [Item1, Item2]),
+                            {error, mismatch}
+                    end
+            end
+    end.
+
+compare_lists(List1, List2) -> compare_lists(List1, List2, 1).
+compare_lists([], [_List2], _) -> {error, list1_empty};
+compare_lists([_List1], [], _) -> {error, list2_empty};
+compare_lists([L1Item|Rest1], [L2Item|Rest2], Index) ->
+    case compare_items(L1Item, L2Item) of
+        {ok, match} ->
+            compare_lists(Rest1, Rest2, Index + 1);
+        {error, Error} ->
+            {error, Error}
+    end;
+compare_lists([], [], _) -> {ok, match}.
+
+compare_maps(none, _) -> {error, map1_empty};
+compare_maps(_, none) -> {error, map2_empty};
+compare_maps(none, none) -> {ok, match};
+compare_maps({K1, V1, Next1}, {K2, V2, Next2}) ->
+    case K1 == K2 of
+        true ->
+            case compare_items(V1, V2) of
+                {ok, match} ->
+                    compare_maps(Next1, Next2);
+                {error, Error} ->
+                    lager:info("Key ~p has mismatch values: ~p != ~p", [K1, V1, V2]),
+                    {error, Error}
+            end;
+        false ->
+            lager:info("Keys don't match: ~p != ~p", [K1, K2]),
+            {error, mismatch}
+    end;
+compare_maps(Itr1, Itr2) ->
+    compare_maps(maps:next(Itr1), maps:next(Itr2)).

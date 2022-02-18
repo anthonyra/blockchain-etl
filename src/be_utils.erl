@@ -3,6 +3,11 @@
 -export([pmap/2, pmap/3]).
 -export([make_values_list/2]).
 -export([split_list/2]).
+-export([get_last_block_time/0]).
+-export([get_max_peer_height/0]).
+
+%% Added for block age support
+-include_lib("blockchain/include/blockchain.hrl").
 
 split_list(List, N) ->
     RevList = do_split_list(List, N),
@@ -43,9 +48,13 @@ make_values_list(NumberElements, NumberRows, Offset) ->
 
 pmap(F, L) ->
     Width = cpus(),
-    pmap(F, L, Width).
+    pmap(F, L, Width, false).
 
-pmap(F, L, Width) ->
+pmap(F, L, Batch) ->
+    Width = cpus(),
+    pmap(F, L, Width, Batch).
+
+pmap(F, L, Width, Batch) ->
     Parent = self(),
     Len = length(L),
     Min = floor(Len / Width),
@@ -59,11 +68,21 @@ pmap(F, L, Width) ->
             (IL, {N, Workers}) ->
                 P = spawn_opt(
                     fun() ->
-                        try lists:map(F, IL) of
+                        Fun = case Batch of
+                            true ->
+                                F(IL);
+                            _ ->
+                                lists:map(F, IL)
+                        end,
+                        try Fun of
                             Res ->
                                 Parent ! {pmap, N, Res}
                         catch
                             What:Why ->
+                                lager:info("Pmap what: ~p why: ~p", [What, Why]),
+                                Parent ! {pmap_crash, What, Why};
+                            What:Why:Stack ->
+                                lager:info("Pmap what: ~p why: ~p stack: ~p", [What, Why, Stack]),
                                 Parent ! {pmap_crash, What, Why}
                         end
                     end,
@@ -108,3 +127,16 @@ partition_list(L, [H | T], Acc) ->
 cpus() ->
     Ct = erlang:system_info(schedulers_online),
     max(2, ceil(Ct / 2) + 1).
+
+get_last_block_time() ->
+    Chain = blockchain_worker:blockchain(),
+    {ok, #block_info_v2{time=HeadBlockTime, height=HeadBlockHeight}} = blockchain:head_block_info(Chain),
+    {ok, #block_info_v2{time=PrevBlockTime}} = blockchain:get_block_info(HeadBlockHeight - 1, Chain),
+    max(60, HeadBlockTime - PrevBlockTime).
+
+get_max_peer_height() ->
+    %% NOTE: Get the max height from peers with peerbook for auto-catchup functionality
+    Book = libp2p_swarm:peerbook(blockchain_swarm:swarm()),
+    Peers = [libp2p_peerbook:get(Book, Address) || Address <- libp2p_peerbook:keys(Book)],
+    PeersHeights = [ libp2p_peer:signed_metadata_get(Peer, <<"height">>, 0) || {ok, Peer} <- Peers],
+    max(1, lists:max(PeersHeights)).
