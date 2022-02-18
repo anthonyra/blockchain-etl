@@ -141,11 +141,23 @@ start_link() ->
 init(_) ->
     self() ! check_status,
     RequestRate = calculate_request_rate(),
-    lager:info("Gateway status starting with update rate: ~p per second", [RequestRate]),
-    {ok, #state{
-        request_rate = RequestRate,
-        requests = ets:new(?SERVER, [ordered_set, public, {write_concurrency, true}])
-    }}.
+    DBHeight = get_db_height(),
+    {ok, AssumedHeight} = application:get_env(blockchain, assumed_valid_block_height),
+    {ok, DBCatchup} = application:get_env(blockchain_etl, db, catchup),
+    %% Check to see if catchup is in progress. If it's activated
+    %% Don't update gateway status table
+    case DBHeight < max(AssumedHeight, DBCatchup) of
+        true ->
+            lager:info("Catchup in progress, update rate set at ~p per second", [
+                RequestRate
+            ]).
+        false ->
+            lager:info("Gateway status starting with update rate: ~p per second", [RequestRate]),
+            {ok, #state{
+                request_rate = RequestRate,
+                requests = ets:new(?SERVER, [ordered_set, public, {write_concurrency, true}])
+            }}.
+    end.
 
 handle_call(request_rate, _From, State = #state{request_rate = RequestRate}) ->
     {reply, RequestRate, State};
@@ -160,44 +172,60 @@ handle_cast(Msg, State) ->
     {noreply, State}.
 
 handle_info(check_status, State = #state{requests = Requests}) ->
-    %% If there are outstnading requests in the ets table we
+    %% If there are outstanding requests in the ets table we
     %% recalcualte the request rate since we're not keeping up.
     RequestRate =
         case ets:info(Requests, size) of
             0 -> State#state.request_rate;
             _ -> calculate_request_rate()
         end,
-    case RequestRate == State#state.request_rate of
+    DBHeight = get_db_height(),
+    {ok, AssumedHeight} = application:get_env(blockchain, assumed_valid_block_height),
+    {ok, DBCatchup} = application:get_env(blockchain_etl, db, catchup),
+    %% Check to see if catchup is in progress. If it's activated
+    %% Don't update gateway status table
+    case DBHeight < max(AssumedHeight, DBCatchup) of
         true ->
-            ok;
-        false ->
-            lager:info("Gateway status adjusting update rate to: ~p per second", [
+            lager:info("Catchup in progress, update rate set at ~p per second", [
                 RequestRate
-            ])
+            ]).
+        false ->
+            case RequestRate == State#state.request_rate of
+                true ->
+                    ok;
+                false ->
+                    lager:info("Gateway status adjusting update rate to: ~p per second", [
+                        RequestRate
+                    ])
+            end,
+            {ok, _, Results} = ?PREPARED_QUERY(?S_STATUS_UNKNOWN_LIST, [RequestRate]),
+             %% Ignore already outstanding requests
+            FilteredResults = lists:filter(
+                fun({A}) ->
+                    length(ets:lookup(Requests, A)) == 0
+                end,
+                Results
+            ),
+
+            PeerBook = libp2p_swarm:peerbook(blockchain_swarm:swarm()),
+            Ledger = blockchain:ledger(),
+            lists:foreach(
+                fun({A}) ->
+                    request_status(A, PeerBook, Ledger, Requests)
+                end,
+                FilteredResults
+            ).
     end,
-    {ok, _, Results} = ?PREPARED_QUERY(?S_STATUS_UNKNOWN_LIST, [RequestRate]),
-
-    %% Ignore already outstanding requests
-    FilteredResults = lists:filter(
-        fun({A}) ->
-            length(ets:lookup(Requests, A)) == 0
-        end,
-        Results
-    ),
-
-    PeerBook = libp2p_swarm:peerbook(blockchain_swarm:swarm()),
-    Ledger = blockchain:ledger(),
-    lists:foreach(
-        fun({A}) ->
-            request_status(A, PeerBook, Ledger, Requests)
-        end,
-        FilteredResults
-    ),
     erlang:send_after(timer:seconds(1), self(), check_status),
     {noreply, State#state{request_rate = RequestRate}};
 handle_info(Info, State) ->
     lager:notice("Unhandled info ~p", [Info]),
     {noreply, State}.
+
+get_db_height() ->
+    %% NOTE: Get the max height in the database
+    {ok, _, [{DBHeight}]} = ?EQUERY("select max(height) from blocks", []),
+    DBHeight.
 
 calculate_request_rate() ->
     %% NOTE:We make time be 10s per minute faster to catch up to the
