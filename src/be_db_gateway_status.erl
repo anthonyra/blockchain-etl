@@ -133,7 +133,8 @@ prepare_conn(Conn) ->
 -record(state, {
     request_rate :: pos_integer(),
     requests :: ets:tid(),
-    max_peer_height :: pos_integer()
+    max_peer_height :: pos_integer(),
+    assumed_height :: pos_integer()
 }).
 
 start_link() ->
@@ -143,10 +144,12 @@ init(_) ->
     self() ! check_status,
     RequestRate = calculate_request_rate(),
     lager:info("Initializing gateway status updater with an update rate: ~p", [RequestRate]),
+    {ok, AssumedHeight} = application:get_env(blockchain, assumed_valid_block_height),
     {ok, #state{
         request_rate = RequestRate,
         requests = ets:new(?SERVER, [ordered_set, public, {write_concurrency, true}]),
-        max_peer_height = be_utils:get_max_peer_height()
+        max_peer_height = be_utils:get_max_peer_height(),
+        assumed_height = AssumedHeight
     }}.
 
 handle_call(request_rate, _From, State = #state{request_rate = RequestRate}) ->
@@ -161,7 +164,7 @@ handle_cast(Msg, State) ->
     lager:notice("Unhandled cast ~p", [Msg]),
     {noreply, State}.
 
-handle_info(check_status, State = #state{requests = Requests, max_peer_height = MaxPeerHeight0}) ->
+handle_info(check_status, State = #state{requests = Requests, assumed_height = AssumedHeight0, max_peer_height = MaxPeerHeight0}) ->
     %% If there are outstanding requests in the ets table we
     %% recalcualte the request rate since we're not keeping up.
     RequestRate =
@@ -176,14 +179,11 @@ handle_info(check_status, State = #state{requests = Requests, max_peer_height = 
             lager:info("Gateway status adjusting update rate to: ~p", [RequestRate])
     end,
     DBHeight = get_db_height(),
-    {ok, AssumedHeight} = application:get_env(blockchain, assumed_valid_block_height),
     {ok, AutoCatchup} = application:get_env(blockchain_etl, auto_catchup),
-    case AutoCatchup andalso DBHeight < max(MaxPeerHeight0, AssumedHeight) of
+    case AutoCatchup andalso DBHeight < max(MaxPeerHeight0, AssumedHeight0) of
         true ->
             BlockTime = be_utils:get_last_block_time(),
-            MaxPeerHeight = be_utils:get_max_peer_height(),
-            lager:info("Catchup is: Active || Status: ~p / ~p", [DBHeight, MaxPeerHeight]),
-            _ = State#state{max_peer_height = MaxPeerHeight};
+            lager:info("Catchup is: Active || Status: ~p / ~p", [DBHeight, MaxPeerHeight0]),
         false ->
             BlockTime = 1, %% Force override here until the insert can be updated to copy
             %% If auto-catchup is off check every day to see if it should be triggered or not
