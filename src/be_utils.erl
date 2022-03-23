@@ -69,7 +69,6 @@ pmap(F, L, Width, Batch) ->
                 P = spawn_opt(
                     fun() ->
                         process_flag(priority, high),
-                        lager:info("Run Queue in pmap: ~p", [erlang:statistics(run_queue)]),
                         Fun = case Batch of
                             true ->
                                 F(IL);
