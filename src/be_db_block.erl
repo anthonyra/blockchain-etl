@@ -325,7 +325,7 @@ compare_maps({K1, V1, Next1}, {K2, V2, Next2}) ->
                 {ok, match} ->
                     compare_maps(Next1, Next2);
                 {error, Error} ->
-                    lager:info("Key ~p has mismatch values: ~p != ~p", [K1, V1, V2]),
+                    lager:info("Key ~p resulted in ~p with values: ~p != ~p", [K1, Error, V1, V2]),
                     {error, Error}
             end;
         false ->
