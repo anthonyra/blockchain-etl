@@ -79,12 +79,12 @@ copy_transactions_list(CopyList, Conn) ->
     epgsql:copy_from_stdin(
         Conn,
         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-        {binary, [bigint, text, transaction_type, jsonb, bigint]}
+        {binary, [int8, text, text, jsonb, int8]}
         ),
     epgsql:copy_send_rows(
         Conn,
         CopyList,
-        5000
+        infinity
     ),
     {ok, Count} = epgsql:copy_done(Conn),
     lager:info("Copy is completed, added ~p rows!", [Count]).
