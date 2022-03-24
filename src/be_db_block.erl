@@ -79,7 +79,7 @@ copy_transactions_list(CopyList, Conn) ->
     epgsql:copy_from_stdin(
         Conn,
         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-        {binary, []}
+        {binary, [bigint, text, transaction_type, jsonb, bigint]}
         ),
     epgsql:copy_send_rows(
         Conn,
@@ -261,11 +261,43 @@ q_copy_transactions(Conn, Block, Ledger) ->
         true
     ),
     End0 = erlang:monotonic_time(millisecond),
-    lager:info("Txns to copy list took ~p ms", [End0 - Start0])
+    lager:info("Txns to copy list took ~p ms", [End0 - Start0]),
     Star1 = erlang:monotonic_time(millisecond),
     copy_transactions_list(CopyList, Conn),
     End1 = erlang:monotonic_time(millisecond),
     lager:info("Copy txns to DB took ~p ms", [End1 - Start1]).
+
+q_json_transactions(Block, Ledger) ->
+    Txns = blockchain_block_v1:transactions(Block),
+    JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
+    Start0 = erlang:monotonic_time(millisecond),
+    OGPmap = be_utils:pmap(
+        fun(T) ->
+            be_txn:to_json(T, JsonOpts)
+        end,
+        Txns
+    ),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Mapping only json of txns took ~p ms", [End0 - Start0]),
+    Start1 = erlang:monotonic_time(millisecond),
+    DetailedPmap = be_utils:pmap(
+        fun(L) ->
+            be_txn:to_detailed_json(L, JsonOpts)
+        end,
+        Txns,
+        true
+    ),
+    End1 = erlang:monotonic_time(millisecond),
+    SpeedUp = floor((End0 - Start0) / (End1 - Start1) * 100)/100,
+    lager:info("Detailed mapping txns for DB took ~p ms (~px speedup)", [End1 - Start1, SpeedUp]),
+    SOGPmap = lists:sort(OGPmap),
+    SDPmap = lists:sort(DetailedPmap),
+    case SOGPmap =:= SDPmap of
+        true ->
+            lager:info("Lists Comparison: true");
+        false ->
+            compare_lists(SOGPmap, SDPmap)
+    end.
 
 q_b64_transactions(Block) ->
     Txns = blockchain_block_v1:transactions(Block),
