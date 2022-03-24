@@ -85,7 +85,9 @@ copy_transactions_list(CopyList, Conn) ->
         Conn,
         CopyList,
         infinity
-    ).
+    )
+    {ok, Count} = epgsql:copy_done(Conn),
+    lager:info("Copy is completed, added ~p rows!", [Count]).
 
 %%
 %% be_block_handler
