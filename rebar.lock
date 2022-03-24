@@ -43,7 +43,7 @@
        {ref,"27a97e04f35c554995467b9236d8ae0188d468c7"}},
   0},
  {<<"epgsql">>,
-  {git,""https://github.com/epgsql/epgsql.git"",
+  {git,"https://github.com/epgsql/epgsql.git",
        {ref,"f7530f63ae40ea2b81bae7d4a33292212349b761"}},
   0},
  {<<"eql">>,{pkg,<<"eql">>,<<"0.2.0">>},1},
