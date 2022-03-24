@@ -89,20 +89,13 @@ copy_transactions_list(CopyList, Conn) ->
         What:Why:Where ->
             lager:warning("Failed to initiate copy mode: ~p", [{What, Why, Where}])
     end,
-    try epgsql:copy_send_rows(
+    epgsql:copy_send_rows(
         Conn,
         CopyList,
         infinity
-    ) of
-       {ok, _} ->
-            {ok, Count} = epgsql:copy_done(Conn),
-            lager:info("Copy is completed, added ~p rows!", [Count]);
-        Other ->
-            lager:info("Something went wrong, ~p", [Other])
-    catch
-        What:Why:Where ->
-            lager:warning("Failed to copy to DB: ~p", [{What, Why, Where}])
-    end.
+    ),
+    {ok, Count} = epgsql:copy_done(Conn),
+    lager:info("Copy is completed, added ~p rows!", [Count]).
 
 %%
 %% be_block_handler
