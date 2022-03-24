@@ -79,7 +79,7 @@ copy_transactions_list(CopyList, Conn) ->
     epgsql:copy_from_stdin(
         Conn,
         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-        {binary, [bigint, text, transaction_type, jsonb, bigint]}
+        {binary, []}
         ),
     epgsql:copy_send_rows(
         Conn,
@@ -120,9 +120,8 @@ load_block(Conn, Hash, Block, _Sync, Ledger, State = #state{}) ->
     lager:info("Batch query flight time took ~p ms", [End1 - Start1]),
     maybe_write_snapshot(Block, blockchain_worker:blockchain()),
      %% Seperate the queries to avoid the batches getting too big
-    q_json_transactions(Block, Ledger),
+    q_json_transactions(Conn, Block, Ledger),
     q_b64_transactions(Block),
-    q_copy_transactions(Conn, Block, Ledger),
     {ok, State#state{height = BlockHeight}}.
 
 %%
@@ -267,7 +266,7 @@ q_copy_transactions(Conn, Block, Ledger) ->
     End1 = erlang:monotonic_time(millisecond),
     lager:info("Copy txns to DB took ~p ms", [End1 - Start1]).
 
-q_json_transactions(Block, Ledger) ->
+q_json_transactions(Conn, Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),
     JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
     Start0 = erlang:monotonic_time(millisecond),
@@ -294,6 +293,7 @@ q_json_transactions(Block, Ledger) ->
     SDPmap = lists:sort(DetailedPmap),
     case SOGPmap =:= SDPmap of
         true ->
+            q_copy_transactions(Conn, Block, Ledger),
             lager:info("Lists Comparison: true");
         false ->
             compare_lists(SOGPmap, SDPmap)
