@@ -304,6 +304,7 @@ compare_items(Item1, Item2) ->
     end.
 
 compare_lists(List1, List2) -> compare_lists(List1, List2, 1).
+compare_lists([], [], _) -> {ok, match};
 compare_lists([], [_List2], _) -> {error, list1_empty};
 compare_lists([_List1], [], _) -> {error, list2_empty};
 compare_lists([L1Item|Rest1], [L2Item|Rest2], Index) ->
@@ -312,8 +313,7 @@ compare_lists([L1Item|Rest1], [L2Item|Rest2], Index) ->
             compare_lists(Rest1, Rest2, Index + 1);
         {error, Error} ->
             {error, Error}
-    end;
-compare_lists([], [], _) -> {ok, match}.
+    end.
 
 compare_maps(none, none) -> {ok, match};
 compare_maps(none, _Next2) -> {error, map1_empty};
