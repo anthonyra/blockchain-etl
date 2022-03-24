@@ -39,11 +39,48 @@ txn_to_copy_list(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars
             End = blockchain_txn_rewards_v2:end_epoch(Txn),
             {ok, Metadata} = be_db_reward:calculate_rewards_metadata(Start, End, Chain),
             Json = #{type := Type} = blockchain_txn:to_json(Txn, Opts ++ [{rewards_metadata, Metadata}]),
-            [Height, Time, ?BIN_TO_B64(blockchain_txn:hash(Txn)), Type, Json];
+            [Height, ?BIN_TO_B64(blockchain_txn:hash(Txn)), Type, Json, Time];
         Type ->
             Json = blockchain_txn:to_json(Txn, []),
             DetailedJson = data_to_json(Type, Json, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars),
-            [Height, Time, ?BIN_TO_B64(blockchain_txn:hash(Txn)), Type, DetailedJson]
+            [Height, ?BIN_TO_B64(blockchain_txn:hash(Txn)), Type, DetailedJson, Time]
+    end.
+
+to_detailed_json(Txns, Opts) ->
+    {ledger, Ledger} = lists:keyfind(ledger, 1, Opts),
+    AGwCF = blockchain_ledger_v1:active_gateways_cf(Ledger),
+    Snapshot = blockchain_ledger_v1:maybe_use_snapshot(Ledger, []),
+    {ok, RegionBins} = blockchain_region_v1:get_all_region_bins(Ledger),
+    %%TODO - Convert from very hacky approach to a better one in blockchain_region_params_v1
+    RegionsParams = [case blockchain_region_params_v1:for_region(Region, Ledger) of
+                        {ok, Params} -> {Region, Params};
+                        _ -> {Region, not_found}
+                    end || {Region, _} <- RegionBins],
+
+    PrefetchedVars = #{
+        poc_v4_exclusion_cells => blockchain_ledger_v1:config(poc_v4_exclusion_cells, Ledger),
+        poc_distance_limt => blockchain_ledger_v1:config(poc_distance_limt, Ledger),
+        data_aggregation_version => blockchain_ledger_v1:config(data_aggregation_version, Ledger),
+        fspl_loss => blockchain_ledger_v1:config(fspl_loss, Ledger),
+        poc_version => blockchain_ledger_v1:config(poc_version, Ledger),
+        discard_zero_frequency => blockchain_ledger_v1:config(discard_zero_freq_witness, Ledger),
+        parent_res => blockchain_ledger_v1:config(poc_v4_parent_res, Ledger)
+    },
+    
+    [ txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) || Txn <- Txns].
+
+txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) ->
+    #{block_height := Height, block_time := Time} = PrefetchedVars,
+    case blockchain_txn:json_type(Txn) of
+        <<"rewards_v2">> ->
+            {chain, Chain} = lists:keyfind(chain, 1, Opts),
+            Start = blockchain_txn_rewards_v2:start_epoch(Txn),
+            End = blockchain_txn_rewards_v2:end_epoch(Txn),
+            {ok, Metadata} = be_db_reward:calculate_rewards_metadata(Start, End, Chain),
+            blockchain_txn:to_json(Txn, Opts ++ [{rewards_metadata, Metadata}]);
+        Type ->
+            Json = blockchain_txn:to_json(Txn, []),
+            data_to_json(Type, Json, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars)
     end.
 
 data_to_json(<<"poc_request_v1">>, Json, AGwCF, Snapshot, _RegionBins, _RegionsParams, _PrefetchedVars) ->
