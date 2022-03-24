@@ -282,8 +282,6 @@ q_b64_transactions(Block) ->
     End0 = erlang:monotonic_time(millisecond),
     lager:info("Mapping b64 of txns took ~p ms", [End0 - Start0]).
 
-
-%%TODO - Print different invalid_reasons but continue the comparison
 compare_items(Item1, Item2) ->
     case is_map(Item1) and is_map(Item2) of
         true ->
