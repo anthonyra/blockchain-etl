@@ -76,11 +76,19 @@ prepare_conn(Conn) ->
     }.
 
 copy_transactions_list(CopyList, Conn) ->
-    epgsql:copy_from_stdin(
+    try epgsql:copy_from_stdin(
         Conn,
         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
         {binary, [int8, text, text, jsonb, int8]}
-        ),
+        ) of
+       {ok, _} ->
+            lager:info("Initiate Copy Mode");
+        Other ->
+            lager:info("Something went wrong, ~p", [Other])
+    catch
+        What:Why:Where ->
+            lager:warning("Failed to initiate copy mode: ~p", [{What, Why, Where}])
+    end,
     try epgsql:copy_send_rows(
         Conn,
         CopyList,
@@ -269,11 +277,11 @@ q_copy_transactions(Conn, Block, Ledger) ->
         true
     ),
     End0 = erlang:monotonic_time(millisecond),
-    lager:info("Txns to copy list took ~p ms", [End0 - Start0]).
-    % Start1 = erlang:monotonic_time(millisecond),
-    % copy_transactions_list(CopyList, Conn),
-    % End1 = erlang:monotonic_time(millisecond),
-    % lager:info("Copy txns to DB took ~p ms", [End1 - Start1]).
+    lager:info("Txns to copy list took ~p ms", [End0 - Start0]),
+    Start1 = erlang:monotonic_time(millisecond),
+    copy_transactions_list(CopyList, Conn),
+    End1 = erlang:monotonic_time(millisecond),
+    lager:info("Copy txns to DB took ~p ms", [End1 - Start1]).
 
 q_json_transactions(Conn, Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),
