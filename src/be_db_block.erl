@@ -84,7 +84,7 @@ copy_transactions_list(CopyList, Conn) ->
     epgsql:copy_send_rows(
         Conn,
         CopyList,
-        infinity
+        5000
     ),
     {ok, Count} = epgsql:copy_done(Conn),
     lager:info("Copy is completed, added ~p rows!", [Count]).
