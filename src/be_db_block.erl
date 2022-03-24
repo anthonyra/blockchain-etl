@@ -78,7 +78,7 @@ prepare_conn(Conn) ->
 copy_transactions_list(CopyList, Conn) ->
     epgsql:copy_from_stdin(
         Conn,
-        "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)"
+        "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
         {binary, []}
         ),
     epgsql:copy_send_rows(
