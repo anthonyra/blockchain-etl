@@ -255,7 +255,7 @@ q_copy_transactions(Conn, Block, Ledger) ->
     Start0 = erlang:monotonic_time(millisecond),
     CopyList = be_utils:pmap(
         fun(L) ->
-            be_txn:to_copy_list(L, JsonOpts)
+            be_txn:to_copy_list(L, Block, JsonOpts)
         end,
         Txns,
         true

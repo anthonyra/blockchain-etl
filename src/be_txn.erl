@@ -7,7 +7,9 @@
 
 -include_lib("blockchain/include/blockchain_utils.hrl").
 
-to_copy_list(Txns, Opts) ->
+to_copy_list(Txns, Block, Opts) ->
+    Height = blockchain_block_v1:height(Block),
+    Time = blockchain_block_v1:time(Block),
     {ledger, Ledger} = lists:keyfind(ledger, 1, Opts),
     AGwCF = blockchain_ledger_v1:active_gateways_cf(Ledger),
     Snapshot = blockchain_ledger_v1:maybe_use_snapshot(Ledger, []),
@@ -19,6 +21,8 @@ to_copy_list(Txns, Opts) ->
                     end || {Region, _} <- RegionBins],
 
     PrefetchedVars = #{
+        block_height => Height,
+        block_time => Time,
         poc_v4_exclusion_cells => blockchain_ledger_v1:config(poc_v4_exclusion_cells, Ledger),
         poc_distance_limt => blockchain_ledger_v1:config(poc_distance_limt, Ledger),
         data_aggregation_version => blockchain_ledger_v1:config(data_aggregation_version, Ledger),
@@ -70,7 +74,6 @@ to_detailed_json(Txns, Opts) ->
     [ txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) || Txn <- Txns].
 
 txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) ->
-    #{block_height := Height, block_time := Time} = PrefetchedVars,
     case blockchain_txn:json_type(Txn) of
         <<"rewards_v2">> ->
             {chain, Chain} = lists:keyfind(chain, 1, Opts),
