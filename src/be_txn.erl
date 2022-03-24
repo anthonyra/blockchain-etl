@@ -1,13 +1,13 @@
 -module(be_txn).
 
 -export([to_json/1, to_json/2, to_json/3]).
--export([to_detailed_json/2]).
+-export([to_copy_list/2]).
 
 -include("be_db_follower.hrl").
 
 -include_lib("blockchain/include/blockchain_utils.hrl").
 
-to_detailed_json(Txns, Opts) ->
+to_copy_list(Txns, Opts) ->
     {ledger, Ledger} = lists:keyfind(ledger, 1, Opts),
     AGwCF = blockchain_ledger_v1:active_gateways_cf(Ledger),
     Snapshot = blockchain_ledger_v1:maybe_use_snapshot(Ledger, []),
@@ -28,19 +28,22 @@ to_detailed_json(Txns, Opts) ->
         parent_res => blockchain_ledger_v1:config(poc_v4_parent_res, Ledger)
     },
     
-    [ txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) || Txn <- Txns].
+    [ txn_to_copy_list(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) || Txn <- Txns].
 
-txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) ->
+txn_to_copy_list(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) ->
+    #{block_height := Height, block_time := Time} = PrefetchedVars,
     case blockchain_txn:json_type(Txn) of
         <<"rewards_v2">> ->
             {chain, Chain} = lists:keyfind(chain, 1, Opts),
             Start = blockchain_txn_rewards_v2:start_epoch(Txn),
             End = blockchain_txn_rewards_v2:end_epoch(Txn),
             {ok, Metadata} = be_db_reward:calculate_rewards_metadata(Start, End, Chain),
-            blockchain_txn:to_json(Txn, Opts ++ [{rewards_metadata, Metadata}]);
+            Json = #{type := Type} = blockchain_txn:to_json(Txn, Opts ++ [{rewards_metadata, Metadata}]),
+            [Height, Time, ?BIN_TO_B64(blockchain_txn:hash(Txn)), Type, Json];
         Type ->
             Json = blockchain_txn:to_json(Txn, []),
-            data_to_json(Type, Json, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars)
+            DetailedJson = data_to_json(Type, Json, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars),
+            [Height, Time, ?BIN_TO_B64(blockchain_txn:hash(Txn)), Type, DetailedJson]
     end.
 
 data_to_json(<<"poc_request_v1">>, Json, AGwCF, Snapshot, _RegionBins, _RegionsParams, _PrefetchedVars) ->

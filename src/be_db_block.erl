@@ -251,7 +251,7 @@ q_json_transactions(Block, Ledger) ->
     Start1 = erlang:monotonic_time(millisecond),
     DetailedPmap = be_utils:pmap(
         fun(L) ->
-            be_txn:to_detailed_json(L, JsonOpts)
+            be_txn:to_copy_list(L, JsonOpts)
         end,
         Txns,
         true
