@@ -315,8 +315,9 @@ compare_lists([L1Item|Rest1], [L2Item|Rest2], Index) ->
     end;
 compare_lists([], [], _) -> {ok, match}.
 
-compare_maps(none, _) -> {error, map1_empty};
-compare_maps(_, none) -> {error, map2_empty};
+compare_maps(none, none) -> {ok, match};
+compare_maps(none, _Next2) -> {error, map1_empty};
+compare_maps(_Next1, none) -> {error, map2_empty};
 compare_maps({K1, V1, Next1}, {K2, V2, Next2}) ->
     case K1 == K2 of
         true ->
@@ -331,6 +332,5 @@ compare_maps({K1, V1, Next1}, {K2, V2, Next2}) ->
             lager:info("Keys don't match: ~p != ~p", [K1, K2]),
             {error, mismatch}
     end;
-compare_maps(none, none) -> {ok, match};
 compare_maps(Itr1, Itr2) ->
     compare_maps(maps:next(Itr1), maps:next(Itr2)).
