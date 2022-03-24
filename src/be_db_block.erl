@@ -81,13 +81,20 @@ copy_transactions_list(CopyList, Conn) ->
         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
         {binary, [int8, text, text, jsonb, int8]}
         ),
-    epgsql:copy_send_rows(
+    try epgsql:copy_send_rows(
         Conn,
         CopyList,
         infinity
-    ),
-    {ok, Count} = epgsql:copy_done(Conn),
-    lager:info("Copy is completed, added ~p rows!", [Count]).
+    ) of
+       {ok, _} ->
+            {ok, Count} = epgsql:copy_done(Conn),
+            lager:info("Copy is completed, added ~p rows!", [Count]);
+        Other ->
+            lager:info("Something went wrong, ~p", [Other])
+    catch
+        What:Why:Where ->
+            lager:warning("Failed to copy to DB: ~p", [{What, Why, Where}])
+    end.
 
 %%
 %% be_block_handler
