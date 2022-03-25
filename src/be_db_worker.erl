@@ -97,10 +97,11 @@ copy_list(List) ->
 
 -spec copy_list(Conn::epgsql:connection(), List::list()) -> ok.
 copy_list(Conn, List) ->
+    lager:info("Copy List: ~p", [lists:last(List)]),
     epgsql:copy_from_stdin(
         Conn,
         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-        {binary, [int8, text, atom, jsonb, int8]}
+        {binary, [int4, text, text, jsonb, int4]}
         ),
     epgsql:copy_send_rows(
         Conn,
