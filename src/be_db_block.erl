@@ -247,6 +247,7 @@ q_copy_transactions(Conn, Block, Ledger) ->
     ),
     End0 = erlang:monotonic_time(millisecond),
     lager:info("Txns to copy list took ~p ms", [End0 - Start0]),
+    lager:info("Copy List (full): ~p", [CopyList]),
     Start1 = erlang:monotonic_time(millisecond),
     ok = ?COPY_LIST(CopyList),
     End1 = erlang:monotonic_time(millisecond),
