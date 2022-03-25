@@ -8,4 +8,5 @@
 -define(PREPARED_QUERY(C, S, P), be_db_worker:prepared_query((C), (S), (P))).
 -define(WITH_TRANSACTION(F), be_db_worker:with_transaction((F))).
 -define(WITH_CONNECTION(F), be_db_worker:with_connection((F))).
+-define(COPY_LIST(L), be_db_worker:copy_list((L))).
 -define(COPY_LIST(C, L), be_db_worker:copy_list((C), (L))).
