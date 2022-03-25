@@ -106,7 +106,7 @@ load_block(Conn, Hash, Block, _Sync, Ledger, State = #state{}) ->
     lager:info("Batch query flight time took ~p ms", [End1 - Start1]),
     maybe_write_snapshot(Block, blockchain_worker:blockchain()),
      %% Seperate the queries to avoid the batches getting too big
-    q_json_transactions(Conn, Block, Ledger),
+    q_json_transactions(Block, Ledger),
     q_b64_transactions(Block),
     {ok, State#state{height = BlockHeight}}.
 
