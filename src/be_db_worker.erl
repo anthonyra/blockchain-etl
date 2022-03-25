@@ -100,7 +100,7 @@ copy_list(Conn, List) ->
     epgsql:copy_from_stdin(
         Conn,
         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-        {binary, []}
+        {binary, [int8, text, atom, jsonb, int8]}
         ),
     epgsql:copy_send_rows(
         Conn,
