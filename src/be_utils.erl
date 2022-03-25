@@ -107,7 +107,12 @@ pmap(F, L, Width, Batch) ->
      || _ <- lists:seq(1, St)
     ],
     {_, L3} = lists:unzip(lists:keysort(1, L2)),
-    lists:flatten(L3).
+    case Batch of
+        true ->
+            L3;
+        false ->
+            lists:flatten(L3)
+    end.
 
 flush_pmap_messages() ->
     receive
