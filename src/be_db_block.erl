@@ -37,7 +37,6 @@ prepare_conn(Conn) ->
             "select max(height) from blocks",
             []
         ),
-
     {ok, S1} =
         epgsql:parse(
             Conn,
@@ -67,35 +66,26 @@ prepare_conn(Conn) ->
             ],
             []
         ),
-
+    {ok, C1} =
+        epgsql:copy_from_stdin(
+            Conn,
+            "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
+            {binary, [int8, text, text, jsonb, int8]}
+            ),
+        epgsql:copy_send_rows(
+            Conn,
+            ?C_TXNS_LIST,
+            infinity
+        ),
+        {ok, Count} = epgsql:copy_done(Conn),
+        lager:info("Copy is completed, added ~p rows!", [Count]),
     #{
         ?S_BLOCK_HEIGHT => S0,
         ?S_INSERT_BLOCK => S1,
         ?S_INSERT_BLOCK_SIG => S2,
-        ?S_INSERT_TXN => S3
+        ?S_INSERT_TXN => S3,
+        ?C_TXNS_LIST => C1
     }.
-
-% copy_transactions_list(CopyList, Conn) ->
-%     try epgsql:copy_from_stdin(
-%         Conn,
-%         "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-%         {binary, [int8, text, text, jsonb, int8]}
-%         ) of
-%        {ok, _} ->
-%             lager:info("Initiate Copy Mode");
-%         Other ->
-%             lager:info("Something went wrong, ~p", [Other])
-%     catch
-%         What:Why:Where ->
-%             lager:warning("Failed to initiate copy mode: ~p", [{What, Why, Where}])
-%     end,
-%     epgsql:copy_send_rows(
-%         Conn,
-%         CopyList,
-%         infinity
-%     ),
-%     {ok, Count} = epgsql:copy_done(Conn),
-%     lager:info("Copy is completed, added ~p rows!", [Count]).
 
 %%
 %% be_block_handler
@@ -272,7 +262,7 @@ q_copy_transactions(Conn, Block, Ledger) ->
     End0 = erlang:monotonic_time(millisecond),
     lager:info("Txns to copy list took ~p ms", [End0 - Start0]),
     Start1 = erlang:monotonic_time(millisecond),
-    % copy_transactions_list(CopyList, Conn),
+    {?C_TXNS_LIST, CopyList},
     End1 = erlang:monotonic_time(millisecond),
     lager:info("Copy txns to DB took ~p ms", [End1 - Start1]).
 
