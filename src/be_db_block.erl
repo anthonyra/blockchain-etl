@@ -276,7 +276,7 @@ q_json_transactions(Block, Ledger) ->
     SpeedUp = floor((End0 - Start0) / (End1 - Start1) * 100)/100,
     lager:info("Detailed mapping txns for DB took ~p ms (~px speedup)", [End1 - Start1, SpeedUp]),
     SOGPmap = lists:sort(OGPmap),
-    SDPmap = lists:sort(DetailedPmap),
+    SDPmap = lists:sort(lists:flatten(DetailedPmap)),
     case SOGPmap =:= SDPmap of
         true ->
             q_copy_transactions(Block, Ledger),
