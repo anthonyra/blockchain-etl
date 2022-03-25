@@ -234,7 +234,7 @@ q_insert_transactions(Block, Ledger, #state{}) ->
     lager:info("Mapping txns for DB took ~p ms", [End0 - Start0]),
     Pmap.
 
-q_copy_transactions(Conn, Block, Ledger) ->
+q_copy_transactions(Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),
     JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
     Start0 = erlang:monotonic_time(millisecond),
@@ -252,7 +252,7 @@ q_copy_transactions(Conn, Block, Ledger) ->
     End1 = erlang:monotonic_time(millisecond),
     lager:info("Copy list to DB took ~p ms", [End1 - Start1]).
 
-q_json_transactions(_Conn, Block, Ledger) ->
+q_json_transactions(Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),
     JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
     Start0 = erlang:monotonic_time(millisecond),
@@ -279,7 +279,7 @@ q_json_transactions(_Conn, Block, Ledger) ->
     SDPmap = lists:sort(DetailedPmap),
     case SOGPmap =:= SDPmap of
         true ->
-            q_copy_transactions(Conn, Block, Ledger),
+            q_copy_transactions(Block, Ledger),
             lager:info("Lists Comparison: true");
         false ->
             compare_lists(SOGPmap, SDPmap)

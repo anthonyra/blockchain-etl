@@ -110,7 +110,7 @@ pmap(F, L, Width, Batch) ->
     case Batch of
         true ->
             L3;
-        false ->
+        _ ->
             lists:flatten(L3)
     end.
 
