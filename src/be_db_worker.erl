@@ -15,6 +15,7 @@
          equery/2,
          prepared_query/2, prepared_query/3,
          batch_query/1, batch_query/2,
+         copy_list/2,
          with_transaction/1, with_connection/1]).
 
 -record(state,
@@ -87,6 +88,25 @@ with_connection(Fun) ->
                                 gen_server:call(Worker, {with_connection, Fun}, infinity)
                         end).
 
+-spec copy_list(Conn::epgsql:connection(), List::list()) -> ok.
+copy_list(Conn, List) ->
+    epgsql:copy_from_stdin(
+        Conn,
+        "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
+        {binary, [int8, text, text, jsonb, int8]}
+        ),
+    epgsql:copy_send_rows(
+        Conn,
+        ?C_TXNS_LIST,
+        infinity
+    ),
+    case epgsql:copy_done(Conn) of
+        {ok, Count} ->
+            lager:info("Copy is completed, added ~p rows!", [Count]);
+        Error ->
+            throw(Error)
+    end.
+
 start_link(Args) ->
     gen_server:start_link(?MODULE, Args, []).
 
@@ -116,6 +136,8 @@ handle_call({prepared_query, Name, Params}, _From, #state{db_conn=Conn, prepared
     {reply, prepared_query({Stmts, Conn}, Name, Params), State};
 handle_call({batch_query, Batch}, _From, #state{db_conn=Conn, prepared_statements=Stmts}=State) ->
     {reply, batch_query({Stmts, Conn}, Batch), State};
+handle_call({copy_list, List}, _From, #state{db_conn=Conn, prepared_statements=Stmts}=State) ->
+    {reply, copy_list(Conn, List), State};
 handle_call({with_transaction, Fun}, _From, #state{db_conn=Conn, prepared_statements=Stmts}=State) ->
     TransactionFun = fun(_) ->
                              Fun({Stmts, Conn})

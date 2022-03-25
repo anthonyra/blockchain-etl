@@ -66,25 +66,11 @@ prepare_conn(Conn) ->
             ],
             []
         ),
-    {ok, C1} =
-        epgsql:copy_from_stdin(
-            Conn,
-            "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-            {binary, [int8, text, text, jsonb, int8]}
-            ),
-        epgsql:copy_send_rows(
-            Conn,
-            ?C_TXNS_LIST,
-            infinity
-        ),
-        {ok, Count} = epgsql:copy_done(Conn),
-        lager:info("Copy is completed, added ~p rows!", [Count]),
     #{
         ?S_BLOCK_HEIGHT => S0,
         ?S_INSERT_BLOCK => S1,
         ?S_INSERT_BLOCK_SIG => S2,
-        ?S_INSERT_TXN => S3,
-        ?C_TXNS_LIST => C1
+        ?S_INSERT_TXN => S3
     }.
 
 %%
@@ -262,7 +248,7 @@ q_copy_transactions(Conn, Block, Ledger) ->
     End0 = erlang:monotonic_time(millisecond),
     lager:info("Txns to copy list took ~p ms", [End0 - Start0]),
     Start1 = erlang:monotonic_time(millisecond),
-    {?C_TXNS_LIST, CopyList},
+    ?COPY_LIST(Conn, CopyList),
     End1 = erlang:monotonic_time(millisecond),
     lager:info("Copy txns to DB took ~p ms", [End1 - Start1]).
 
