@@ -109,7 +109,8 @@ copy_list(Conn, List) ->
     ),
     case epgsql:copy_done(Conn) of
         {ok, Count} ->
-            lager:info("Copy is completed, added ~p rows!", [Count]);
+            lager:info("Copy is completed, added ~p rows!", [Count]),
+            ok;
         Error ->
             throw(Error)
     end.
