@@ -97,7 +97,7 @@ copy_list(Conn, List) ->
         ),
     epgsql:copy_send_rows(
         Conn,
-        ?C_TXNS_LIST,
+        List,
         infinity
     ),
     case epgsql:copy_done(Conn) of
