@@ -88,7 +88,7 @@ with_connection(Fun) ->
                                 gen_server:call(Worker, {with_connection, Fun}, infinity)
                         end).
 
--spec copy_list(List::list()]) -> ok | {error, list()}.
+-spec copy_list(List::list()) -> ok | {error, list()}.
 copy_list(List) ->
     poolboy:transaction(?DB_POOL,
                         fun(Worker) ->
