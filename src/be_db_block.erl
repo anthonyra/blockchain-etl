@@ -247,12 +247,9 @@ q_copy_transactions(Block, Ledger) ->
         Txns,
         true
     ),
-    End0 = erlang:monotonic_time(millisecond),
-    lager:info("Txns to copy list took ~p ms", [End0 - Start0]),
-    Start1 = erlang:monotonic_time(millisecond),
     [?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
-    End1 = erlang:monotonic_time(millisecond),
-    lager:info("Copy list to DB took ~p ms", [End1 - Start1]).
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Copy txns list to DB took ~p ms", [End0 - Start0]).
 
 q_json_transactions(Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),
