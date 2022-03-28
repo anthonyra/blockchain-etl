@@ -8,6 +8,8 @@
 
 -include_lib("blockchain/include/blockchain_utils.hrl").
 
+to_actors_copy_list(Height, Txns) when is_list(Txns) ->
+    [to_actors_copy_list(Height, Txn) || Txn <- Txns];
 to_actors_copy_list(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
     {Role, Key} = be_db_txn_actor:to_actors(Txn),
