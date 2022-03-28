@@ -100,7 +100,7 @@ load_block(Conn, Hash, Block, _Sync, Ledger, State = #state{}) ->
     BlockQueries = q_insert_block(Hash, Block, Ledger, State),
     ok = ?BATCH_QUERY(Conn, BlockQueries),
     End0 = erlang:monotonic_time(millisecond),
-    lager:info("Batch inserts to DB took ~p ms", [End0 - Start0]),
+    lager:info("Batch insert txns into DB took ~p ms", [End0 - Start0]),
     q_copy_transactions(Block, Ledger),
     maybe_write_snapshot(Block, blockchain_worker:blockchain()),
     {ok, State#state{height = BlockHeight}}.
@@ -234,4 +234,4 @@ q_copy_transactions(Block, Ledger) ->
     ),
     [?COPY_LIST(CopyList) || CopyList <- CopyLists],
     End0 = erlang:monotonic_time(millisecond),
-    lager:info("Copy list to DB took ~p ms", [End0 - Start0]).
+    lager:info("Copy txns into DB took ~p ms", [End0 - Start0]).
