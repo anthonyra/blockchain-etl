@@ -102,7 +102,7 @@ q_copy_transaction_actors(Block) ->
         Txns,
         true
     ),
-    [?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
+    %%[?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
     End0 = erlang:monotonic_time(millisecond),
     lager:info("Txn Actors copy list took ~p ms", [End0 - Start0]).
 

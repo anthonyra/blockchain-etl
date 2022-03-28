@@ -97,7 +97,6 @@ copy_list(Config, List) ->
 
 -spec copy_list({TableString::string, Format::{atom(), list()}}, List::list(), Conn::epgsql:connection()) -> ok.
 copy_list({TableString, Format}, List, Conn) ->
-    lager:info("Copy List (~p): ~p", [length(List), lists:last(List)]),
     epgsql:copy_from_stdin(
         Conn,
         "COPY " ++ TableString ++ " FROM STDIN WITH (FORMAT binary)",
@@ -108,13 +107,7 @@ copy_list({TableString, Format}, List, Conn) ->
         List,
         infinity
     ),
-    case epgsql:copy_done(Conn) of
-        {ok, Count} ->
-            lager:info("Copy is completed, added ~p rows!", [Count]),
-            ok;
-        Error ->
-            throw(Error)
-    end.
+    epgsql:copy_done(Conn).
 
 start_link(Args) ->
     gen_server:start_link(?MODULE, Args, []).
