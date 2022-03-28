@@ -2,10 +2,16 @@
 
 -export([to_json/1, to_json/2, to_json/3]).
 -export([to_copy_list/3, to_detailed_json/2]).
+-export([to_actors_copy_list/2]).
 
 -include("be_db_follower.hrl").
 
 -include_lib("blockchain/include/blockchain_utils.hrl").
+
+to_actors_copy_list(Height, Txn) ->
+    TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
+    {Role, Key} = be_db_txn_actor:to_actors(Txn),
+    [Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash].
 
 to_copy_list(Txns, Block, Opts) ->
     Height = blockchain_block_v1:height(Block),

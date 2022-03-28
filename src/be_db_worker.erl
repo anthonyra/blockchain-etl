@@ -15,7 +15,7 @@
          equery/2,
          prepared_query/2, prepared_query/3,
          batch_query/1, batch_query/2,
-         copy_list/1, copy_list/2,
+         copy_list/2, copy_list/3,
          with_transaction/1, with_connection/1]).
 
 -record(state,
@@ -88,19 +88,19 @@ with_connection(Fun) ->
                                 gen_server:call(Worker, {with_connection, Fun}, infinity)
                         end).
 
--spec copy_list(List::list()) -> ok | {error, list()}.
-copy_list(List) ->
+-spec copy_list(Type::string(), List::list()) -> ok | {error, list()}.
+copy_list(Type, List) ->
     poolboy:transaction(?DB_POOL,
                         fun(Worker) ->
-                                gen_server:call(Worker, {copy_list, List}, infinity)
+                                gen_server:call(Worker, {copy_list, Type, List}, infinity)
                         end).
 
--spec copy_list(Conn::epgsql:connection(), List::list()) -> ok.
-copy_list(Conn, List) ->
+-spec copy_list(Type::string(), List::list(), Conn::epgsql:connection()) -> ok.
+copy_list(Type, List, Conn) ->
     lager:info("Copy List (~p): ~p", [length(List), lists:last(List)]),
     epgsql:copy_from_stdin(
         Conn,
-        "COPY transactions_copied (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
+        "COPY " ++ Type ++ " (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
         {binary, [int8, text, text, jsonb, int8]}
         ),
     epgsql:copy_send_rows(
@@ -145,8 +145,8 @@ handle_call({prepared_query, Name, Params}, _From, #state{db_conn=Conn, prepared
     {reply, prepared_query({Stmts, Conn}, Name, Params), State};
 handle_call({batch_query, Batch}, _From, #state{db_conn=Conn, prepared_statements=Stmts}=State) ->
     {reply, batch_query({Stmts, Conn}, Batch), State};
-handle_call({copy_list, List}, _From, #state{db_conn=Conn}=State) ->
-    {reply, copy_list(Conn, List), State};
+handle_call({copy_list, Type, List}, _From, #state{db_conn=Conn}=State) ->
+    {reply, copy_list(Type, List, Conn), State};
 handle_call({with_transaction, Fun}, _From, #state{db_conn=Conn, prepared_statements=Stmts}=State) ->
     TransactionFun = fun(_) ->
                              Fun({Stmts, Conn})

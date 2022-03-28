@@ -56,8 +56,12 @@ init(_) ->
     {ok, #state{}}.
 
 load_block(Conn, _Hash, Block, _Sync, _Ledger, State = #state{}) ->
+    Start0 = erlang:monotonic_time(millisecond),
     Queries = q_insert_block_transaction_actors(Block),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Txn Actors batch inserts took ~p ms", [End0 - Start0]),
     execute_queries(Conn, Queries),
+    q_copy_transaction_actors(Block),
     {ok, State}.
 
 execute_queries(Conn, Queries) when length(Queries) > 100 ->
@@ -84,6 +88,21 @@ execute_queries(Conn, Queries) when length(Queries) > 10 ->
     );
 execute_queries(Conn, Queries) ->
     ok = ?BATCH_QUERY(Conn, [{?S_INSERT_ACTOR, I} || I <- Queries]).
+
+q_copy_transaction_actors(Block) ->
+    Height = blockchain_block_v1:height(Block),
+    Txns = blockchain_block_v1:transactions(Block),
+    Start0 = erlang:monotonic_time(millisecond),
+    CopyLists = be_utils:pmap(
+        fun(L) ->
+            be_txn:to_actors_copy_list(Height, L)
+        end,
+        Txns,
+        true
+    ),
+    [?COPY_LIST("transaction_actors_copied", CopyList) || CopyList <- CopyLists],
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Txn Actors copy list took ~p ms", [End0 - Start0]).
 
 q_insert_transaction_actors(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
