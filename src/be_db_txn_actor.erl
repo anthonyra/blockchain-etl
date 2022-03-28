@@ -95,7 +95,7 @@ q_copy_transaction_actors(Block) ->
     Height = blockchain_block_v1:height(Block),
     Txns = blockchain_block_v1:transactions(Block),
     Start0 = erlang:monotonic_time(millisecond),
-    _CopyLists = be_utils:pmap(
+    CopyLists = be_utils:pmap(
         fun(L) ->
             be_txn:to_actors_copy_list(Height, L)
         end,
@@ -104,7 +104,7 @@ q_copy_transaction_actors(Block) ->
     ),
     %%[?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
     End0 = erlang:monotonic_time(millisecond),
-    lager:info("Txn Actors copy list took ~p ms", [End0 - Start0]).
+    lager:info("Txn Actors copy list took ~p ms. CopyLists (~p)", [End0 - Start0, length(CopyLists)]).
 
 q_insert_transaction_actors(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
