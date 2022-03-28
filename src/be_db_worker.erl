@@ -88,20 +88,20 @@ with_connection(Fun) ->
                                 gen_server:call(Worker, {with_connection, Fun}, infinity)
                         end).
 
--spec copy_list(Type::string(), List::list()) -> ok | {error, list()}.
-copy_list(Type, List) ->
+-spec copy_list(Config::{TableString::string, Format::{atom(), list()}}, List::list()) -> ok | {error, list()}.
+copy_list(Config, List) ->
     poolboy:transaction(?DB_POOL,
                         fun(Worker) ->
-                                gen_server:call(Worker, {copy_list, Type, List}, infinity)
+                                gen_server:call(Worker, {copy_list, Config, List}, infinity)
                         end).
 
--spec copy_list(Type::string(), List::list(), Conn::epgsql:connection()) -> ok.
-copy_list(Type, List, Conn) ->
+-spec copy_list({TableString::string, Format::{atom(), list()}}, List::list(), Conn::epgsql:connection()) -> ok.
+copy_list({TableString, Format}, List, Conn) ->
     lager:info("Copy List (~p): ~p", [length(List), lists:last(List)]),
     epgsql:copy_from_stdin(
         Conn,
-        "COPY " ++ Type ++ " (block, hash, type, fields, time) FROM STDIN WITH (FORMAT binary)",
-        {binary, [int8, text, text, jsonb, int8]}
+        "COPY " ++ TableString ++ " FROM STDIN WITH (FORMAT binary)",
+        Format
         ),
     epgsql:copy_send_rows(
         Conn,
