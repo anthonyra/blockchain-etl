@@ -95,7 +95,7 @@ copy_list(List) ->
                                 gen_server:call(Worker, {copy_list, List}, infinity)
                         end).
 
--spec copy_list(Conn::epgsql:connection(), List::list()) -> ok.
+-spec copy_list(Conn::epgsql:connection(), List::list()) -> {ok, Count::non_neg_integer()}.
 copy_list(Conn, List) ->
     epgsql:copy_from_stdin(
         Conn,

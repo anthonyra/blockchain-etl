@@ -150,9 +150,6 @@ data_to_json(<<"poc_receipts_v1">>, Json, AGwCF, Snapshot, RegionBins, RegionsPa
 data_to_json(_, Json, _AGwCF, _Snapshot, _RegionBins, _RegionsParams, _PrefetchedVars) ->
     Json.
 
-% -spec distance_check(SrcLoc :: h3:h3_index(), DstLoc :: h3:h3_index(), ExclusionCells :: pos_integer()) -> 
-%     {true, pos_integer()} | boolean().
-
 is_valid_witness(WitnessJson, ChallengeInfo, PrefetchedVars) ->
     #{h3_index := WitnessH3Index, signal := RSSI, snr := SNR, frequency := Frequency, channel := WitnessChannel}=WitnessJson,
     #{region_frequencies_eirps := FreqEirps, challenge_channels := Channels, challengee_region_bin := RegionBin}=ChallengeInfo,
@@ -252,7 +249,7 @@ data_aggregation_check(DAV, RSSI, SNR, Version) ->
             end;
         _ ->
             %% SNR+Freq+Channels not collected, nothing else we can check
-            {true, <<"insufficient_data">>}
+            true
     end.
 
 check_rssi_snr_vers(RSSI, SNR, Version) ->
