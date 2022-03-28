@@ -50,42 +50,6 @@ txn_to_copy_list(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars
             [Height, ?BIN_TO_B64(blockchain_txn:hash(Txn)), Type, DetailedJson, Time]
     end.
 
-to_detailed_json(Txns, Opts) ->
-    {ledger, Ledger} = lists:keyfind(ledger, 1, Opts),
-    AGwCF = blockchain_ledger_v1:active_gateways_cf(Ledger),
-    Snapshot = blockchain_ledger_v1:maybe_use_snapshot(Ledger, []),
-    {ok, RegionBins} = blockchain_region_v1:get_all_region_bins(Ledger),
-    %%TODO - Convert from very hacky approach to a better one in blockchain_region_params_v1
-    RegionsParams = [case blockchain_region_params_v1:for_region(Region, Ledger) of
-                        {ok, Params} -> {Region, Params};
-                        _ -> {Region, not_found}
-                    end || {Region, _} <- RegionBins],
-
-    PrefetchedVars = #{
-        poc_v4_exclusion_cells => blockchain_ledger_v1:config(poc_v4_exclusion_cells, Ledger),
-        poc_distance_limt => blockchain_ledger_v1:config(poc_distance_limt, Ledger),
-        data_aggregation_version => blockchain_ledger_v1:config(data_aggregation_version, Ledger),
-        fspl_loss => blockchain_ledger_v1:config(fspl_loss, Ledger),
-        poc_version => blockchain_ledger_v1:config(poc_version, Ledger),
-        discard_zero_frequency => blockchain_ledger_v1:config(discard_zero_freq_witness, Ledger),
-        parent_res => blockchain_ledger_v1:config(poc_v4_parent_res, Ledger)
-    },
-    
-    [ txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) || Txn <- Txns].
-
-txn_to_json(Txn, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars, Opts) ->
-    case blockchain_txn:json_type(Txn) of
-        <<"rewards_v2">> ->
-            {chain, Chain} = lists:keyfind(chain, 1, Opts),
-            Start = blockchain_txn_rewards_v2:start_epoch(Txn),
-            End = blockchain_txn_rewards_v2:end_epoch(Txn),
-            {ok, Metadata} = be_db_reward:calculate_rewards_metadata(Start, End, Chain),
-            blockchain_txn:to_json(Txn, Opts ++ [{rewards_metadata, Metadata}]);
-        Type ->
-            Json = blockchain_txn:to_json(Txn, []),
-            data_to_json(Type, Json, AGwCF, Snapshot, RegionBins, RegionsParams, PrefetchedVars)
-    end.
-
 data_to_json(<<"poc_request_v1">>, Json, AGwCF, Snapshot, _RegionBins, _RegionsParams, _PrefetchedVars) ->
     #{challenger := Challenger} = Json,
     {ok, ChallengerInfo} = get_from_rocksdb(Challenger, AGwCF, Snapshot),
@@ -227,49 +191,6 @@ is_valid_witness(WitnessJson, ChallengeInfo, PrefetchedVars) ->
                     {false, <<"incorrect_frequency">>}
             end
     end.
-
-% is_valid_witness_old(WitnessJson, ChallengeInfo, PrefetchedVars) ->
-%     #{h3_index := WitnessH3Index, signal := RSSI, snr := SNR, frequency := Frequency, channel := WitnessChannel}=WitnessJson,
-%     #{challengee_region := ChallengeeRegion, region_frequencies_eirps := FreqEirps, challenge_channels := Channels, challengee_region_bin := RegionBin}=ChallengeInfo,
-%     #{data_aggregation_version := DAV, poc_version := Version, discard_zero_frequency := DiscardZeroFreq}=PrefetchedVars,
-%     case discard_for_zero_frequency(DiscardZeroFreq, Frequency) of
-%         true ->
-%             {false, <<"witness_zero_freq">>};
-%         false ->
-%             case check_region(WitnessH3Index, RegionBin) of
-%                 {true, _} ->
-%                     case is_too_far(WitnessJson, ChallengeInfo, PrefetchedVars) of
-%                         true ->
-%                             {false, <<"witness_too_far">>};
-%                         false ->
-%                             case not_too_close(WitnessJson, ChallengeInfo, PrefetchedVars) of
-%                                 true ->
-%                                     case check_rssi_signal_strength(WitnessJson, ChallengeInfo, PrefetchedVars) of
-%                                         true ->
-%                                             case check_valid_frequency(Frequency, FreqEirps, Version) of
-%                                                 true ->
-%                                                     case data_aggregation_check(DAV, RSSI, SNR, Version) of
-%                                                         true ->
-%                                                             case lists:last(Channels) == WitnessChannel of
-%                                                                 true ->
-%                                                                     {true, <<"ok">>};
-%                                                                 false ->
-%                                                                     {false, <<"witness_on_incorrect_channel">>}
-%                                                             end;
-%                                                         {false, Reason} -> {false, Reason}
-%                                                     end;
-%                                                 false ->
-%                                                     {false, <<"incorrect_frequency">>}
-%                                             end;
-%                                         false ->
-%                                             {false, <<"witness_rssi_too_high">>}
-%                                     end;
-%                                 {false, Reason} -> {false, Reason}
-%                             end
-%                     end;
-%                 {false, Reason} -> {false, Reason}
-%             end
-%     end.
 
 discard_for_zero_frequency(DiscardZeroFreq, Freq) ->
     case {DiscardZeroFreq, Freq} of
