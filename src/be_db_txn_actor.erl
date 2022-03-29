@@ -58,9 +58,9 @@ init(_) ->
 load_block(Conn, _Hash, Block, _Sync, _Ledger, State = #state{}) ->
     Start0 = erlang:monotonic_time(millisecond),
     Queries = q_insert_block_transaction_actors(Block),
+    execute_queries(Conn, Queries),
     End0 = erlang:monotonic_time(millisecond),
     lager:info("Txn Actors batch inserts took ~p ms", [End0 - Start0]),
-    execute_queries(Conn, Queries),
     q_copy_transaction_actors(Block),
     {ok, State}.
 
