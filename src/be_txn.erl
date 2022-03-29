@@ -12,6 +12,7 @@ to_actors_copy_list(Height, Txns) ->
     [modified_to_actors(Height, Txn) || Txn <- Txns].
 
 modified_to_actors(Height, Txn) ->
+    lager:info("Raw Txn: ~p", [Txn]),
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
     {Role, Key} = be_db_txn_actor:to_actors(Txn),
     [Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash].
