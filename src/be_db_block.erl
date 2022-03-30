@@ -236,13 +236,13 @@ q_insert_transactions(Block, Ledger, #state{}) ->
     lager:info("Mapping txns for DB took ~p ms", [End0 - Start0]),
     Pmap.
 
-q_copy_transaction_actors(Block) ->
+q_copy_transactions(Block, Ledger) ->
     Height = blockchain_block_v1:height(Block),
     Txns = blockchain_block_v1:transactions(Block),
     Start0 = erlang:monotonic_time(millisecond),
     CopyLists = be_utils:batch_pmap(
         fun(L) ->
-            be_txn:actors_to_copy_list(Height, L)
+            be_txn:to_copy_list(L, Block, JsonOpts)
         end,
         Txns
     ),
