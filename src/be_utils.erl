@@ -2,12 +2,26 @@
 
 -export([pmap/2, pmap/3]).
 -export([make_values_list/2]).
--export([split_list/2]).
+-export([flatten_once/1, split_list/2]).
 -export([get_last_block_time/0]).
 -export([get_max_peer_height/0]).
 
 %% Added for block age support
 -include_lib("blockchain/include/blockchain.hrl").
+
+append([H | T], L) -> [H | append(T, L)];
+append([], L) -> L.
+
+flatten_once(List) ->
+    flatten_once(List, []).
+flatten_once([H|T], L) ->
+    case is_list(lists:last(H)) of
+        true ->
+            flatten_once(T, append(H, L));
+        false ->
+            flatten_once(T, [H | L])
+    end;
+flatten_once([], L) -> L.
 
 split_list(List, N) ->
     RevList = do_split_list(List, N),

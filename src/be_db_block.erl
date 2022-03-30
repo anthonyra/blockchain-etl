@@ -247,7 +247,7 @@ q_copy_transactions(Block, Ledger) ->
         Txns,
         true
     ),
-    [?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
+    ?COPY_LIST({TableString, Format}, be_utils:flatten_once(CopyLists)),
     End0 = erlang:monotonic_time(millisecond),
     CopyListsLengths = [length(CopyList) || CopyList <- CopyLists],
     lager:info("Copy txns list to DB took ~p ms. CopyLists ~p", [End0 - Start0, CopyListsLengths]).

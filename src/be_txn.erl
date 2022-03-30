@@ -8,23 +8,9 @@
 
 -include_lib("blockchain/include/blockchain_utils.hrl").
 
-append([H | T], L) -> [H | append(T, L)];
-append([], L) -> L.
-
-flatten_once(List) ->
-    flatten_once(List, []).
-flatten_once([H|T], L) ->
-    case is_list(lists:last(H)) of
-        true ->
-            flatten_once(T, append(H, L));
-        false ->
-            flatten_once(T, [H | L])
-    end;
-flatten_once([], L) -> L.
-
 to_actors_copy_list(Height, Txns) ->
     RawList = [modified_to_actors(Height, Txn) || Txn <- Txns],
-    flatten_once(RawList).
+    be_utils:flatten_once(RawList).
 
 modified_to_actors(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
