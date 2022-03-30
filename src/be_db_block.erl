@@ -240,12 +240,11 @@ q_copy_transactions(Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),
     JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
     Start0 = erlang:monotonic_time(millisecond),
-    CopyLists = be_utils:pmap(
+    CopyLists = be_utils:batch_pmap(
         fun(L) ->
             be_txn:to_copy_list(L, Block, JsonOpts)
         end,
-        Txns,
-        true
+        Txns        
     ),
     [?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
     End0 = erlang:monotonic_time(millisecond),
@@ -265,12 +264,11 @@ q_json_transactions(Block, Ledger) ->
     End0 = erlang:monotonic_time(millisecond),
     lager:info("Mapping only json of txns took ~p ms", [End0 - Start0]),
     Start1 = erlang:monotonic_time(millisecond),
-    DetailedPmap = be_utils:pmap(
+    DetailedPmap = be_utils:batch_pmap(
         fun(L) ->
             be_txn:to_detailed_json(L, JsonOpts)
         end,
-        Txns,
-        true
+        Txns
     ),
     End1 = erlang:monotonic_time(millisecond),
     SpeedUp = floor((End0 - Start0) / (End1 - Start1) * 100)/100,

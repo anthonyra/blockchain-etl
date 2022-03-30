@@ -95,12 +95,11 @@ q_copy_transaction_actors(Block) ->
     Height = blockchain_block_v1:height(Block),
     Txns = blockchain_block_v1:transactions(Block),
     Start0 = erlang:monotonic_time(millisecond),
-    CopyLists = be_utils:pmap(
+    CopyLists = be_utils:batch_pmap(
         fun(L) ->
             be_txn:to_actors_copy_list(Height, L)
         end,
-        Txns,
-        true
+        Txns
     ),
     [?COPY_LIST(?COPY_ACTOR_CONFIG, CopyList) || CopyList <- CopyLists],
     End0 = erlang:monotonic_time(millisecond),

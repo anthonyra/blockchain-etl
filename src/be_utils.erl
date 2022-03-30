@@ -1,6 +1,6 @@
 -module(be_utils).
 
--export([pmap/2, pmap/3]).
+-export([batch_pmap/2, pmap/2, pmap/3]).
 -export([make_values_list/2]).
 -export([flatten_once/1, split_list/2]).
 -export([get_last_block_time/0]).
@@ -60,14 +60,14 @@ make_values_list(NumberElements, NumberRows, Offset) ->
         | make_values_list(NumberElements, NumberRows - 1, Offset + NumberElements)
     ].
 
-%%TODO - Maybe create a biased pmap so that heavier txns are more evenly split?
+batch_pmap(F, L) ->
+    Width = cpus(),
+    pmap(F, L, Width, true).
+
 pmap(F, L) ->
     Width = cpus(),
-    pmap(F, L, Width, false).
-
-pmap(F, L, Batch) ->
-    Width = cpus(),
-    pmap(F, L, Width, Batch).
+    Results = pmap(F, L, Width, false),
+    lists:flatten(Results).
 
 pmap(F, L, Width, Batch) ->
     Parent = self(),
@@ -122,12 +122,7 @@ pmap(F, L, Width, Batch) ->
      || _ <- lists:seq(1, St)
     ],
     {_, L3} = lists:unzip(lists:keysort(1, L2)),
-    case Batch of
-        true ->
-            L3;
-        _ ->
-            lists:flatten(L3)
-    end.
+    L3.
 
 flush_pmap_messages() ->
     receive
