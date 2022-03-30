@@ -19,7 +19,7 @@ flatten_once([H|T], L) ->
             flatten_once(T, append(H, L));
         false ->
             flatten_once(T, [H | L])
-    end.
+    end;
 flatten_once([], L) -> L.
 
 to_actors_copy_list(Height, Txns) ->
