@@ -2,17 +2,17 @@
 
 -export([to_json/1, to_json/2, to_json/3]).
 -export([to_copy_list/3, to_detailed_json/2]).
--export([to_actors_copy_list/2]).
+-export([actors_to_copy_list/2]).
 
 -include("be_db_follower.hrl").
 
 -include_lib("blockchain/include/blockchain_utils.hrl").
 
-to_actors_copy_list(Height, Txns) ->
-    RawList = [modified_to_actors(Height, Txn) || Txn <- Txns],
+actors_to_copy_list(Height, Txns) ->
+    RawList = [to_actors_list(Height, Txn) || Txn <- Txns],
     be_utils:flatten_once(RawList).
 
-modified_to_actors(Height, Txn) ->
+to_actors_list(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
     Actors = be_db_txn_actor:to_actors(Txn),
     [[?BIN_TO_B58(Key), list_to_binary(Role), TxnHash, Height] || {Role, Key} <- Actors].

@@ -116,7 +116,7 @@ q_copy_transaction_actors(Block) ->
     Start0 = erlang:monotonic_time(millisecond),
     CopyLists = be_utils:batch_pmap(
         fun(L) ->
-            be_txn:to_actors_copy_list(Height, L)
+            be_txn:actors_to_copy_list(Height, L)
         end,
         Txns
     ),
