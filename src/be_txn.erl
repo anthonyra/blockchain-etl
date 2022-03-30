@@ -8,14 +8,28 @@
 
 -include_lib("blockchain/include/blockchain_utils.hrl").
 
+append([H | T], L) -> [H | append(T, L)];
+append([], L) -> L.
+
+flatten_once(List) ->
+    flatten_once(List, []).
+flatten_once([H|T], L) when is_list(H) ->
+    flatten_once(T, append(H, L));
+flatten_once([H|T], L) ->
+    flatten_once(T, [H | L]);
+flatten_once([], L) -> L.
+
 to_actors_copy_list(Height, Txns) ->
     [modified_to_actors(Height, Txn) || Txn <- Txns].
 
 modified_to_actors(Height, Txn) ->
     lager:info("Raw Txn: ~p", [Txn]),
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
-    {Role, Key} = be_db_txn_actor:to_actors(Txn),
-    [Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash].
+    Actors = be_db_txn_actor:to_actors(Txn),
+    RawList = [[Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash] || {Key, Role} <- Actors],
+    lager:info("RawList Count: ~p", [length(RawList)]),
+    FlatList = flatten_once(RawList),
+    lager:info("FlatList Count: ~p", [length(FlatList)]).
 
 to_copy_list(Txns, Block, Opts) ->
     Height = blockchain_block_v1:height(Block),
