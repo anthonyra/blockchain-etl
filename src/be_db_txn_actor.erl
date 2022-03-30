@@ -91,7 +91,7 @@ execute_queries(Conn, Queries) ->
 
 q_copy_transaction_actors(Block) ->
     TableString = "transaction_actors_copied (actor, actor_role, transaction_hash, block)",
-    Format = {binary, [text, text, text, int8]},
+    Format = [text, text, text, int8],
     Height = blockchain_block_v1:height(Block),
     Txns = blockchain_block_v1:transactions(Block),
     Start0 = erlang:monotonic_time(millisecond),

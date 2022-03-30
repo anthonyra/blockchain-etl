@@ -97,17 +97,25 @@ copy_list(Config, List) ->
 
 -spec copy_list({TableString::string, Format::{atom(), list()}}, List::list(), Conn::epgsql:connection()) -> ok.
 copy_list({TableString, Format}, List, Conn) ->
-    epgsql:copy_from_stdin(
+    case epgsql:copy_from_stdin(
         Conn,
         "COPY " ++ TableString ++ " FROM STDIN WITH (FORMAT binary)",
-        Format
-        ),
-    epgsql:copy_send_rows(
-        Conn,
-        List,
-        infinity
-    ),
-    epgsql:copy_done(Conn).
+        {binary, Format}
+    ) of
+        {ok, _} ->
+            case epgsql:copy_send_rows(
+                Conn,
+                List,
+                infinity
+            ) of
+                {ok, _} ->
+                    epgsql:copy_done(Conn);
+                {error, Error} ->
+                    throw({error, Error})
+            end;
+        {error, Error} ->
+            throw({error, Error})
+    end.
 
 start_link(Args) ->
     gen_server:start_link(?MODULE, Args, []).

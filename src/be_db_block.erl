@@ -236,7 +236,7 @@ q_insert_transactions(Block, Ledger, #state{}) ->
 
 q_copy_transactions(Block, Ledger) ->
     TableString = "transactions_copied (block, hash, type, fields, time)", 
-    Format = {binary, [int8, text, text, jsonb, int8]},
+    Format = [int8, text, text, jsonb, int8],
     Txns = blockchain_block_v1:transactions(Block),
     JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
     Start0 = erlang:monotonic_time(millisecond),
