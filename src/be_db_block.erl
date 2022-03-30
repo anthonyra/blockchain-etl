@@ -19,6 +19,8 @@
 -define(S_INSERT_BLOCK_SIG, "insert_block_signature").
 -define(S_INSERT_TXN, "insert_transaction").
 
+-define(COPY_ACTOR_CONFIG, {"transactions_copied (block, hash, type, fields, time)", [int8, text, text, jsonb, int8]}).
+
 -record(state, {
     height :: non_neg_integer(),
 
@@ -234,22 +236,19 @@ q_insert_transactions(Block, Ledger, #state{}) ->
     lager:info("Mapping txns for DB took ~p ms", [End0 - Start0]),
     Pmap.
 
-q_copy_transactions(Block, Ledger) ->
-    TableString = "transactions_copied (block, hash, type, fields, time)", 
-    Format = [int8, text, text, jsonb, int8],
+q_copy_transaction_actors(Block) ->
+    Height = blockchain_block_v1:height(Block),
     Txns = blockchain_block_v1:transactions(Block),
-    JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
     Start0 = erlang:monotonic_time(millisecond),
     CopyLists = be_utils:batch_pmap(
         fun(L) ->
-            be_txn:to_copy_list(L, Block, JsonOpts)
+            be_txn:actors_to_copy_list(Height, L)
         end,
-        Txns        
+        Txns
     ),
-    [?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
+    ?COPY_LIST(?COPY_ACTOR_CONFIG, CopyLists),
     End0 = erlang:monotonic_time(millisecond),
-    CopyListsLengths = [length(CopyList) || CopyList <- CopyLists],
-    lager:info("Copy txns list to DB took ~p ms. CopyLists ~p", [End0 - Start0, CopyListsLengths]).
+    lager:info("Txn Actors copy list took ~p ms. CopyLists (~p)", [End0 - Start0, length(CopyLists)]).
 
 q_json_transactions(Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),
