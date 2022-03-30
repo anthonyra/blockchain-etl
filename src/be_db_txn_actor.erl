@@ -105,7 +105,7 @@ q_copy_transaction_actors(Block) ->
     [?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
     End0 = erlang:monotonic_time(millisecond),
     CopyListsLengths = [length(CopyList) || CopyList <- CopyLists],
-    lager:info("Txn Actors copy list took ~p ms. CopyLists (~p)", [End0 - Start0, CopyListsLengths]).
+    lager:info("Txn Actors copy list took ~p ms. CopyLists ~p", [End0 - Start0, CopyListsLengths]).
 
 q_insert_transaction_actors(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
