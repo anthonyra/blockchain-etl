@@ -23,10 +23,9 @@ to_actors_copy_list(Height, Txns) ->
     [modified_to_actors(Height, Txn) || Txn <- Txns].
 
 modified_to_actors(Height, Txn) ->
-    lager:info("Raw Txn: ~p", [Txn]),
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
     Actors = be_db_txn_actor:to_actors(Txn),
-    RawList = [[Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash] || {Key, Role} <- Actors],
+    RawList = [[Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash] || {Role, Key} <- Actors],
     lager:info("RawList Count: ~p", [length(RawList)]),
     FlatList = flatten_once(RawList),
     lager:info("FlatList Count: ~p", [length(FlatList)]).
