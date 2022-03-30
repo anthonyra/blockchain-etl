@@ -1,6 +1,6 @@
 -module(be_utils).
 
--export([batch_pmap/2, pmap/2, pmap/3]).
+-export([batch_pmap/2, pmap/2]).
 -export([make_values_list/2]).
 -export([flatten_once/1, split_list/2]).
 -export([get_last_block_time/0]).
