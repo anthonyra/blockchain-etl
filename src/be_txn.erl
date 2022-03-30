@@ -13,7 +13,7 @@ append([], L) -> L.
 
 flatten_once(List) ->
     flatten_once(List, []).
-flatten_once([H|T], L) when is_list(H) ->
+flatten_once([H|T], L) when is_list(lists:last(H)) ->
     flatten_once(T, append(H, L));
 flatten_once([H|T], L) ->
     flatten_once(T, [H | L]);
