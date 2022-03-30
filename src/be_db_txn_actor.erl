@@ -19,6 +19,8 @@
 -define(S_INSERT_ACTOR_10, "insert_actor_10").
 -define(S_INSERT_ACTOR_100, "insert_actor_100").
 
+-define(COPY_ACTOR_CONFIG, {"transaction_actors (actor, actor_role, transaction_hash, block)", [text, text, text, int8]}).
+
 -record(state, {}).
 
 %%
@@ -90,8 +92,6 @@ execute_queries(Conn, Queries) ->
     ok = ?BATCH_QUERY(Conn, [{?S_INSERT_ACTOR, I} || I <- Queries]).
 
 q_copy_transaction_actors(Block) ->
-    TableString = "transaction_actors_copied (actor, actor_role, transaction_hash, block)",
-    Format = [text, text, text, int8],
     Height = blockchain_block_v1:height(Block),
     Txns = blockchain_block_v1:transactions(Block),
     Start0 = erlang:monotonic_time(millisecond),
@@ -102,7 +102,7 @@ q_copy_transaction_actors(Block) ->
         Txns,
         true
     ),
-    [?COPY_LIST({TableString, Format}, CopyList) || CopyList <- CopyLists],
+    [?COPY_LIST(?COPY_ACTOR_CONFIG, CopyList) || CopyList <- CopyLists],
     End0 = erlang:monotonic_time(millisecond),
     CopyListsLengths = [length(CopyList) || CopyList <- CopyLists],
     lager:info("Txn Actors copy list took ~p ms. CopyLists ~p", [End0 - Start0, CopyListsLengths]).
