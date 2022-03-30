@@ -62,7 +62,11 @@ make_values_list(NumberElements, NumberRows, Offset) ->
 
 batch_pmap(F, L) ->
     Width = cpus(),
-    pmap(F, L, Width, true).
+    Results = pmap(F, L, Width, true),
+    %% If you didn't flatten_once here you'd have a list of lists equal to the # of partitions created
+    %% in pmap. You could then send those lists as individual copies to the DB but if one failed it'd
+    %% result in a partial upload to the DB. Instead this creates a single copylist from the results.
+    flatten_once(Results).
 
 pmap(F, L) ->
     Width = cpus(),
