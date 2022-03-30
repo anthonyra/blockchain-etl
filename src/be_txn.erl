@@ -24,9 +24,7 @@ flatten_once([], L) -> L.
 
 to_actors_copy_list(Height, Txns) ->
     RawList = [modified_to_actors(Height, Txn) || Txn <- Txns],
-    lager:info("RawList Count: ~p", [length(RawList)]),
-    FlatList = flatten_once(RawList),
-    lager:info("FlatList Count: ~p", [length(FlatList)]).
+    flatten_once(RawList).
 
 modified_to_actors(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
