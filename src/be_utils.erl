@@ -15,7 +15,7 @@ append([], L) -> L.
 flatten_once(List) ->
     flatten_once(List, []).
 flatten_once([H|T], L) ->
-    case is_list(lists:last(H)) of
+    case lists:all(fun(I) -> is_list(I) end, H) of
         true ->
             flatten_once(T, append(H, L));
         false ->
