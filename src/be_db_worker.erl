@@ -88,14 +88,18 @@ with_connection(Fun) ->
                                 gen_server:call(Worker, {with_connection, Fun}, infinity)
                         end).
 
--spec copy_list(Config::{TableString::string, Format::{atom(), list()}}, List::list()) -> ok | {error, list()}.
+%% Config - is a tuple consisting of the following;
+%%          TableString in the following format "table_copied_to (col1, col2, ... colN)"
+%%          Format is a list of epgsql_type() [text, int4, ... type] https://github.com/epgsql/epgsql/tree/devel/src/datatypes
+%% The Tablestring columns (col1, col2, ... colN) need to match the format list created out of epgsql_type()'s
+-spec copy_list(Config::{TableString::string, Format::list()}, List::list()) -> ok | {error, list()}.
 copy_list(Config, List) ->
     poolboy:transaction(?DB_POOL,
                         fun(Worker) ->
                                 gen_server:call(Worker, {copy_list, Config, List}, infinity)
                         end).
 
--spec copy_list({TableString::string, Format::{atom(), list()}}, List::list(), Conn::epgsql:connection()) -> ok.
+-spec copy_list({TableString::string, Format::list()}, List::list(), Conn::epgsql:connection()) -> ok.
 copy_list({TableString, Format}, List, Conn) ->
     case epgsql:copy_from_stdin(
         Conn,
@@ -108,7 +112,7 @@ copy_list({TableString, Format}, List, Conn) ->
                 List,
                 infinity
             ) of
-                {ok, _} ->
+                ok ->
                     epgsql:copy_done(Conn);
                 {error, Error} ->
                     throw({error, Error})
