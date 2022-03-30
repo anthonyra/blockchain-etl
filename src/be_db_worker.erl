@@ -92,6 +92,8 @@ with_connection(Fun) ->
 %%          TableString in the following format "table_copied_to (col1, col2, ... colN)"
 %%          Format is a list of epgsql_type() [text, int4, ... type] https://github.com/epgsql/epgsql/tree/devel/src/datatypes
 %% The Tablestring columns (col1, col2, ... colN) need to match the format list created out of epgsql_type()'s
+%% List   - is a list of lists that represent the data as rows in the table being copied to;
+%%          [ [Row1], [Row2], ... [RowN] ], Row1 = [col1_value, col2_value, ... colN_value]
 -spec copy_list(Config::{TableString::string, Format::list()}, List::list()) -> ok | {error, list()}.
 copy_list(Config, List) ->
     poolboy:transaction(?DB_POOL,
