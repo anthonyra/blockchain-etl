@@ -15,7 +15,7 @@
          equery/2,
          prepared_query/2, prepared_query/3,
          batch_query/1, batch_query/2,
-         copy_list/2, copy_list/3,
+         copy_list/2,
          with_transaction/1, with_connection/1]).
 
 -record(state,
