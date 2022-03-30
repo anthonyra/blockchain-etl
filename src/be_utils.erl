@@ -132,7 +132,7 @@ partition_list(L, [H | T], Acc) ->
 
 cpus() ->
     Ct = erlang:system_info(schedulers_online),
-    max(2, ceil(Ct / 1.25) + 1).
+    max(2, ceil(Ct / 2) + 1).
 
 get_last_block_time() ->
     Chain = blockchain_worker:blockchain(),
