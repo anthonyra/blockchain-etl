@@ -29,7 +29,7 @@ to_actors_copy_list(Height, Txns) ->
 modified_to_actors(Height, Txn) ->
     TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
     Actors = be_db_txn_actor:to_actors(Txn),
-    [[Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash] || {Role, Key} <- Actors].
+    [[?BIN_TO_B58(Key), list_to_binary(Role), TxnHash, Height] || {Role, Key} <- Actors].
 
 to_copy_list(Txns, Block, Opts) ->
     Height = blockchain_block_v1:height(Block),

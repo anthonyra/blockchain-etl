@@ -46,6 +46,7 @@ make_values_list(NumberElements, NumberRows, Offset) ->
         | make_values_list(NumberElements, NumberRows - 1, Offset + NumberElements)
     ].
 
+%%TODO - Maybe create a biased pmap so that heavier txns are more evenly split?
 pmap(F, L) ->
     Width = cpus(),
     pmap(F, L, Width, false).
