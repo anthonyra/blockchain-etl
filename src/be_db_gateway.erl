@@ -107,11 +107,6 @@ load_block(Conn, _Hash, Block, _Sync, Ledger, State = #state{}) ->
         ),
     be_db_follower:maybe_log_duration(db_gateway_unhandled_fold, StartUnhandled),
 
-    %% Gateways = map #{key => true}
-    %% Gateways to list maps:keys(Gateways)
-    %% "gateways (block, address, owner, location, last_poc_challenge, last_poc_onion_key_hash, witnesses, nonce, name, time, reward_scale, elevation, gain, location_hex, mode)"
-    %% [int8, text, text, text, int8, text, jsonb, int4, text, int8, int8, int4, int4, text, text]
-
     StartMkQuery = erlang:monotonic_time(millisecond),
     BlockHeight = blockchain_block_v1:height(Block),
     BlockTime = blockchain_block_v1:time(Block),
@@ -143,6 +138,8 @@ load_block(Conn, _Hash, Block, _Sync, Ledger, State = #state{}) ->
     ),
     be_db_follower:maybe_log_duration(db_gateway_query_make, StartMkQuery),
 
+    %% "gateways (block, address, owner, location, last_poc_challenge, last_poc_onion_key_hash, witnesses, nonce, name, time, reward_scale, elevation, gain, location_hex, mode)"
+    %% [int8, text, text, text, int8, text, jsonb, int4, text, int8, int8, int4, int4, text, text]
     StartCopyList = erlang:monotonic_time(millisecond), 
     CopyLists = be_utils:batch_pmap(
         fun(G) ->
