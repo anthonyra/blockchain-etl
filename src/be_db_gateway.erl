@@ -145,8 +145,8 @@ load_block(Conn, _Hash, Block, _Sync, Ledger, State = #state{}) ->
 
     StartCopyList = erlang:monotonic_time(millisecond), 
     CopyLists = be_utils:batch_pmap(
-        fun(Gateways) ->
-            be_txn:format_gateways_for_copy(Gateways, Block, Ledger)
+        fun(G) ->
+            be_txn:format_gateways_for_copy(G, Block, Ledger)
         end,
         maps:keys(Gateways)
     ),
