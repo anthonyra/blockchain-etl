@@ -140,7 +140,7 @@ init(Args) ->
                                    [undefined_as_null]}}],
     {ok, Conn} = epgsql:connect(DBOpts#{codecs => Codecs}),
     PreparedStatements = lists:foldl(fun(Mod, Acc) ->
-                                             maps:merge(Mod:prepare_conn(Conn), Acc)
+                                            maps:merge(Mod:prepare_conn(Conn), Acc)
                                      end, #{}, GetOpt(db_handlers)),
     {ok, #state{db_conn=Conn, prepared_statements=PreparedStatements}}.
 

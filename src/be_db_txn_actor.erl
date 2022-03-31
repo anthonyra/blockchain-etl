@@ -8,6 +8,8 @@
 -behavior(be_db_worker).
 -behavior(be_db_follower).
 
+%% be_db_worker
+-export([prepare_conn/1]).
 %% be_block_handler
 -export([init/1, load_block/6]).
 %% api
@@ -16,6 +18,13 @@
 -define(COPY_ACTOR_CONFIG, {"transaction_actors (actor, actor_role, transaction_hash, block)", [text, text, text, int8]}).
 
 -record(state, {}).
+
+%%
+%% be_db_worker
+%%
+
+prepare_conn(_Conn) ->
+    lager:info("Intentionally left blank to prevent error...").
 
 %%
 %% be_block_handler
