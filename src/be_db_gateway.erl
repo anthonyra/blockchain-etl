@@ -109,13 +109,14 @@ load_block(Conn, _Hash, Block, _Sync, Ledger, State = #state{}) ->
 
     %% Gateways = map #{key => true}
     %% Gateways to list maps:keys(Gateways)
-
+    %% "gateways (block, address, owner, location, last_poc_challenge, last_poc_onion_key_hash, witnesses, nonce, name, time, reward_scale, elevation, gain, location_hex, mode)"
+    %% [int8, text, text, text, int8, text, jsonb, int4, text, int8, int8, int4, int4, text, text]
 
     StartMkQuery = erlang:monotonic_time(millisecond),
     BlockHeight = blockchain_block_v1:height(Block),
     BlockTime = blockchain_block_v1:time(Block),
     ChangeType =
-        case block_contains_election(Block) of
+        case be_utils:block_contains_election(Block) of
             true -> election;
             false -> block
         end,
@@ -141,6 +142,16 @@ load_block(Conn, _Hash, Block, _Sync, Ledger, State = #state{}) ->
         Gateways
     ),
     be_db_follower:maybe_log_duration(db_gateway_query_make, StartMkQuery),
+
+    StartCopyList = erlang:monotonic_time(millisecond), 
+    CopyLists = be_utils:batch_pmap(
+        fun(Gateways) ->
+            be_txn:format_gateways_for_copy(Gateways, Block, Ledger)
+        end,
+        maps:keys(Gateways)
+    ),
+    lager:info("Gateway Format Example: ~p", [lists:last(CopyLists)]),
+    be_db_follower:maybe_log_duration(format_gateways_for_copy, StartCopyList),
 
     StartQuery = erlang:monotonic_time(millisecond),
     ok = ?BATCH_QUERY(Conn, Queries),
@@ -185,16 +196,10 @@ q_insert_gateway(BlockHeight, BlockTime, Address, GW, ChangeType, Ledger) ->
         RewardScale,
         blockchain_ledger_gateway_v2:elevation(GW),
         blockchain_ledger_gateway_v2:gain(GW),
-        ?MAYBE_H3(?MAYBE_FN(fun calculate_location_hex/1, Location)),
+        ?MAYBE_H3(?MAYBE_FN(fun be_utils:calculate_location_hex/1, Location)),
         blockchain_ledger_gateway_v2:mode(GW)
     ],
     {?S_INSERT_GATEWAY, Params}.
-
--define(H3_LOCATION_RES, 8).
-
--spec calculate_location_hex(h3:h3index()) -> h3:h3index().
-calculate_location_hex(Location) ->
-    h3:parent(Location, ?H3_LOCATION_RES).
 
 witnesses_to_json(Witnesses) ->
     maps:fold(
@@ -217,13 +222,6 @@ witness_to_json(Witness) ->
             blockchain_ledger_gateway_v2:witness_recent_time(Witness)
         )
     }.
-
--spec block_contains_election(blockchain_block:block()) -> boolean().
-block_contains_election(Block) ->
-    lists:any(
-        fun(Txn) -> blockchain_txn:type(Txn) == blockchain_txn_consensus_group_v1 end,
-        blockchain_block:transactions(Block)
-    ).
 
 incremental_commit_hook(_Changes) ->
     ok.

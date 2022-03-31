@@ -5,9 +5,24 @@
 -export([flatten_once/1, split_list/2]).
 -export([get_last_block_time/0]).
 -export([get_max_peer_height/0]).
+-export([block_contains_election/1]).
 
 %% Added for block age support
 -include_lib("blockchain/include/blockchain.hrl").
+
+%% Data minipulation
+-define(H3_LOCATION_RES, 8).
+
+-spec calculate_location_hex(h3:h3index()) -> h3:h3index().
+calculate_location_hex(Location) ->
+    h3:parent(Location, ?H3_LOCATION_RES).
+
+-spec block_contains_election(blockchain_block:block()) -> boolean().
+block_contains_election(Block) ->
+    lists:any(
+        fun(Txn) -> blockchain_txn:type(Txn) == blockchain_txn_consensus_group_v1 end,
+        blockchain_block:transactions(Block)
+    ).
 
 append([H | T], L) -> [H | append(T, L)];
 append([], L) -> L.

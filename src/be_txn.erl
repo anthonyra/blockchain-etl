@@ -17,6 +17,60 @@ to_actors_list(Height, Txn) ->
     Actors = be_db_txn_actor:to_actors(Txn),
     [[?BIN_TO_B58(Key), list_to_binary(Role), TxnHash, Height] || {Role, Key} <- Actors].
 
+format_gateways_for_copy(Gateways, Block, Ledger) ->
+    RawGateways = [format_gateways_for_copy(Gateway, Block, Ledger) || Gateway <- Gateways],
+    [G || G <- RawGateways, G /= []].
+
+format_gateways_for_copy(Gateway, Height, Time, Ledger) ->
+    Height = blockchain_block_v1:height(Block),
+    Time = blockchain_block_v1:time(Block),
+    ChangeType = case be_utils:block_contains_election(Block) of
+        true -> election;
+        false -> block
+    end,
+    case blockchain_ledger_v1:find_gateway_info(Address, Ledger) of
+        {ok, GW} ->
+                B58Address = ?BIN_TO_B58(Address),
+                {ok, Name} = erl_angry_purple_tiger:animal_name(B58Address),
+                Location = blockchain_ledger_gateway_v2:location(GW),
+                Mode = blockchain_ledger_gateway_v2:mode(GW),
+                RewardScale = case ChangeType of
+                    block ->
+                        undefined;
+                    election ->
+                        ?MAYBE_FN(
+                            fun(L) ->
+                                %% Only insert scale value for "full | light" gateways
+                                case {Mode, blockchain_hex:scale(L, Ledger)} of
+                                    {full, {ok, V}} -> blockchain_utils:normalize_float(V);
+                                    {light, {ok, V}} -> blockchain_utils:normalize_float(V);
+                                    _ -> undefined
+                                end
+                            end,
+                            Location
+                        )
+                end,
+               [
+                    Height,
+                    B58Address,
+                    ?BIN_TO_B58(blockchain_ledger_gateway_v2:owner_address(GW)),
+                    ?MAYBE_H3(Location),
+                    ?MAYBE_UNDEFINED(blockchain_ledger_gateway_v2:last_poc_challenge(GW)),
+                    ?MAYBE_B64(blockchain_ledger_gateway_v2:last_poc_onion_key_hash(GW)),
+                    witnesses_to_json(blockchain_ledger_gateway_v2:witnesses(GW)),
+                    blockchain_ledger_gateway_v2:nonce(GW),
+                    Name,
+                    Time,
+                    RewardScale,
+                    blockchain_ledger_gateway_v2:elevation(GW),
+                    blockchain_ledger_gateway_v2:gain(GW),
+                    ?MAYBE_H3(?MAYBE_FN(fun be_utils:calculate_location_hex/1, Location)),
+                    Mode
+                ]
+        {error, _} ->
+            []
+    end.
+
 to_copy_list(Txns, Block, Opts) ->
     Height = blockchain_block_v1:height(Block),
     Time = blockchain_block_v1:time(Block),
