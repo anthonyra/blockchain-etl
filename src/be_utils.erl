@@ -7,6 +7,7 @@
 -export([get_max_peer_height/0]).
 -export([block_contains_election/1, witnesses_to_json/1]).
 
+-include("be_db_follower.hrl").
 %% Added for block age support
 -include_lib("blockchain/include/blockchain.hrl").
 
