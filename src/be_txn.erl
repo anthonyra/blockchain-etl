@@ -17,11 +17,11 @@ to_actors_list(Height, Txn) ->
     Actors = be_db_txn_actor:to_actors(Txn),
     [[?BIN_TO_B58(Key), list_to_binary(Role), TxnHash, Height] || {Role, Key} <- Actors].
 
-format_gateways_for_copy(Gateways, Block, Ledger) ->
+format_gateways_for_copy(Gateways, Block, Ledger) when is_list(Gateways) ->
     RawGateways = [format_gateways_for_copy(Gateway, Block, Ledger) || Gateway <- Gateways],
     [G || G <- RawGateways, G /= []].
 
-format_gateways_for_copy(Gateway, Height, Time, Ledger) ->
+format_gateways_for_copy(Gateway, Block, Ledger) ->
     Height = blockchain_block_v1:height(Block),
     Time = blockchain_block_v1:time(Block),
     ChangeType = case be_utils:block_contains_election(Block) of
