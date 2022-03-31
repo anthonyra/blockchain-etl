@@ -5,7 +5,7 @@
 -export([flatten_once/1, split_list/2]).
 -export([get_last_block_time/0]).
 -export([get_max_peer_height/0]).
--export([block_contains_election/1, witnesses_to_json/1]).
+-export([calculate_location_hex/1, block_contains_election/1, witnesses_to_json/1]).
 
 -include("be_db_follower.hrl").
 %% Added for block age support

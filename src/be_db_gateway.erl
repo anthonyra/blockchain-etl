@@ -8,8 +8,6 @@
 -export([init/1, load_block/6]).
 %% hooks
 -export([incremental_commit_hook/1, end_commit_hook/2]).
-%% api
--export([calculate_location_hex/1]).
 
 -behavior(be_db_worker).
 -behavior(be_db_follower).
