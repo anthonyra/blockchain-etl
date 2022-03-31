@@ -23,8 +23,28 @@
 %% be_db_worker
 %%
 
-prepare_conn(_Conn) ->
-    lager:info("Intentionally left blank to prevent error...").
+prepare_conn(Conn) ->
+    MkQueryFun = fun(Rows) ->
+        epgsql:parse(
+            Conn,
+            ?S_INSERT_ACTOR ++ "_" ++ integer_to_list(Rows),
+            [
+                "insert into transaction_actors (block, actor, actor_role, transaction_hash) ",
+                "values  ",
+                be_utils:make_values_list(4, Rows),
+                "on conflict do nothing"
+            ],
+            []
+        )
+    end,
+    {ok, S1} = MkQueryFun(1),
+    {ok, S10} = MkQueryFun(10),
+    {ok, S100} = MkQueryFun(100),
+    #{
+        ?S_INSERT_ACTOR => S1,
+        ?S_INSERT_ACTOR_10 => S10,
+        ?S_INSERT_ACTOR_100 => S100
+    }.
 
 %%
 %% be_block_handler
