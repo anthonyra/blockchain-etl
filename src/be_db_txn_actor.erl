@@ -13,12 +13,12 @@
 %% be_block_handler
 -export([init/1, load_block/6]).
 %% api
--export([to_actors/1, q_copy_transaction_actors/2]).
+-export([to_actors/1, q_insert_transaction_actors/2, q_copy_transaction_actors/2]).
 
--define(COPY_ACTOR_CONFIG, {"transaction_actors_copied (actor, actor_role, transaction_hash, block)", [text, text, text, int8]}).
 -define(S_INSERT_ACTOR, "insert_actor").
 -define(S_INSERT_ACTOR_10, "insert_actor_10").
 -define(S_INSERT_ACTOR_100, "insert_actor_100").
+-define(COPY_ACTOR_CONFIG, {"transaction_actors_copied (actor, actor_role, transaction_hash, block)", [text, text, text, int8]}).
 
 -record(state, {}).
 
@@ -57,8 +57,54 @@ init(_) ->
     {ok, #state{}}.
 
 load_block(Conn, _Hash, Block, _Sync, _Ledger, State = #state{}) ->
+    Queries = q_insert_block_transaction_actors(Block),
+    execute_queries(Conn, Queries),
     q_copy_transaction_actors(Block),
     {ok, State}.
+
+execute_queries(Conn, Queries) when length(Queries) > 100 ->
+    lists:foreach(
+        fun
+            (Q) when length(Q) == 100 ->
+                %% Can't match 100 in the success case since conflicts are ignored
+                {ok, _} = ?PREPARED_QUERY(Conn, ?S_INSERT_ACTOR_100, lists:flatten(Q));
+            (Q) ->
+                execute_queries(Conn, Q)
+        end,
+        be_utils:split_list(Queries, 100)
+    );
+execute_queries(Conn, Queries) when length(Queries) > 10 ->
+    lists:foreach(
+        fun
+            (Q) when length(Q) == 10 ->
+                %% Can't match 10 in the success case since conflicts are ignored
+                {ok, _} = ?PREPARED_QUERY(Conn, ?S_INSERT_ACTOR_10, lists:flatten(Q));
+            (Q) ->
+                execute_queries(Conn, Q)
+        end,
+        be_utils:split_list(Queries, 10)
+    );
+execute_queries(Conn, Queries) ->
+    ok = ?BATCH_QUERY(Conn, [{?S_INSERT_ACTOR, I} || I <- Queries]).
+
+q_insert_transaction_actors(Height, Txn) ->
+    TxnHash = ?BIN_TO_B64(blockchain_txn:hash(Txn)),
+    lists:map(
+        fun({Role, Key}) ->
+            [Height, ?BIN_TO_B58(Key), list_to_binary(Role), TxnHash]
+        end,
+        to_actors(Txn)
+    ).
+
+q_insert_block_transaction_actors(Block) ->
+    Height = blockchain_block_v1:height(Block),
+    Txns = blockchain_block_v1:transactions(Block),
+    lists:flatmap(
+        fun(Txn) ->
+            q_insert_transaction_actors(Height, Txn)
+        end,
+        Txns
+    ).
 
 q_copy_transaction_actors(Block) ->
     Height = blockchain_block_v1:height(Block),
