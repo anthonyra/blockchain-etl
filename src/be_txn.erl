@@ -2,7 +2,7 @@
 
 -export([to_json/1, to_json/2, to_json/3]).
 -export([to_copy_list/3, to_detailed_json/2]).
--export([actors_to_copy_list/2]).
+-export([actors_to_copy_list/2, format_gateways_for_copy/3]).
 
 -include("be_db_follower.hrl").
 

@@ -263,7 +263,7 @@ gateway_location_hex() ->
                             [
                                 Addr,
                                 ?MAYBE_H3(
-                                    ?MAYBE_FN(fun be_db_gateway:calculate_location_hex/1, Location)
+                                    ?MAYBE_FN(fun be_utils:calculate_location_hex/1, Location)
                                 )
                             ]
                         )
