@@ -20,7 +20,7 @@ to_actors_list(Height, Txn) ->
 format_gateways_for_copy(Gateways, Block, Ledger) when is_list(Gateways) ->
     RawGateways = [format_gateways_for_copy(Gateway, Block, Ledger) || Gateway <- Gateways],
     [G || G <- RawGateways, G /= []];
-format_gateways_for_copy(Gateway, Block, Ledger) ->
+format_gateways_for_copy(Address, Block, Ledger) ->
     Height = blockchain_block_v1:height(Block),
     Time = blockchain_block_v1:time(Block),
     ChangeType = case be_utils:block_contains_election(Block) of
@@ -56,7 +56,7 @@ format_gateways_for_copy(Gateway, Block, Ledger) ->
                     ?MAYBE_H3(Location),
                     ?MAYBE_UNDEFINED(blockchain_ledger_gateway_v2:last_poc_challenge(GW)),
                     ?MAYBE_B64(blockchain_ledger_gateway_v2:last_poc_onion_key_hash(GW)),
-                    witnesses_to_json(blockchain_ledger_gateway_v2:witnesses(GW)),
+                    be_utils:witnesses_to_json(blockchain_ledger_gateway_v2:witnesses(GW)),
                     blockchain_ledger_gateway_v2:nonce(GW),
                     Name,
                     Time,

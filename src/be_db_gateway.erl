@@ -187,7 +187,7 @@ q_insert_gateway(BlockHeight, BlockTime, Address, GW, ChangeType, Ledger) ->
         ?MAYBE_H3(Location),
         ?MAYBE_UNDEFINED(blockchain_ledger_gateway_v2:last_poc_challenge(GW)),
         ?MAYBE_B64(blockchain_ledger_gateway_v2:last_poc_onion_key_hash(GW)),
-        witnesses_to_json(blockchain_ledger_gateway_v2:witnesses(GW)),
+        be_utils:witnesses_to_json(blockchain_ledger_gateway_v2:witnesses(GW)),
         blockchain_ledger_gateway_v2:nonce(GW),
         Name,
         RewardScale,
@@ -197,28 +197,6 @@ q_insert_gateway(BlockHeight, BlockTime, Address, GW, ChangeType, Ledger) ->
         blockchain_ledger_gateway_v2:mode(GW)
     ],
     {?S_INSERT_GATEWAY, Params}.
-
-witnesses_to_json(Witnesses) ->
-    maps:fold(
-        fun(Key, Witness, Acc) ->
-            Acc#{?BIN_TO_B58(Key) => witness_to_json(Witness)}
-        end,
-        #{},
-        Witnesses
-    ).
-
-witness_to_json(Witness) ->
-    #{
-        <<"histogram">> => blockchain_ledger_gateway_v2:witness_hist(Witness),
-        <<"first_time">> => ?MAYBE_FN(
-            fun(V) -> integer_to_binary(V) end,
-            blockchain_ledger_gateway_v2:witness_first_time(Witness)
-        ),
-        <<"recent_time">> => ?MAYBE_FN(
-            fun(V) -> integer_to_binary(V) end,
-            blockchain_ledger_gateway_v2:witness_recent_time(Witness)
-        )
-    }.
 
 incremental_commit_hook(_Changes) ->
     ok.
