@@ -3,7 +3,7 @@
 
 +c true
 +C multi_time_warp
-+sbwt long
++sbwt very_short
 +stbt db
 +sub true
 +swt very_low
