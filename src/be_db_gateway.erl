@@ -107,6 +107,10 @@ load_block(Conn, _Hash, Block, _Sync, Ledger, State = #state{}) ->
         ),
     be_db_follower:maybe_log_duration(db_gateway_unhandled_fold, StartUnhandled),
 
+    %% Gateways = map #{key => true}
+    %% Gateways to list maps:keys(Gateways)
+
+
     StartMkQuery = erlang:monotonic_time(millisecond),
     BlockHeight = blockchain_block_v1:height(Block),
     BlockTime = blockchain_block_v1:time(Block),
