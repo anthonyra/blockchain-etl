@@ -16,6 +16,9 @@
 -export([to_actors/1, q_copy_transaction_actors/2]).
 
 -define(COPY_ACTOR_CONFIG, {"transaction_actors (actor, actor_role, transaction_hash, block)", [text, text, text, int8]}).
+-define(S_INSERT_ACTOR, "insert_actor").
+-define(S_INSERT_ACTOR_10, "insert_actor_10").
+-define(S_INSERT_ACTOR_100, "insert_actor_100").
 
 -record(state, {}).
 
