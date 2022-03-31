@@ -17,6 +17,8 @@
 -record(state, {}).
 
 -define(S_INSERT_GATEWAY, "insert_gateway").
+-define(C_GATEWAYS_CONFIG, {"gateways (block, address, owner, location, last_poc_challenge, last_poc_onion_key_hash, witnesses, nonce, name, time, reward_scale, elevation, gain, location_hex, mode)",
+    [int8, text, text, text, int8, text, jsonb, int4, text, int8, int8, int4, int4, text, text]}).
 
 %%
 %% be_db_worker
@@ -138,8 +140,6 @@ load_block(Conn, _Hash, Block, _Sync, Ledger, State = #state{}) ->
     ),
     be_db_follower:maybe_log_duration(db_gateway_query_make, StartMkQuery),
 
-    %% "gateways (block, address, owner, location, last_poc_challenge, last_poc_onion_key_hash, witnesses, nonce, name, time, reward_scale, elevation, gain, location_hex, mode)"
-    %% [int8, text, text, text, int8, text, jsonb, int4, text, int8, int8, int4, int4, text, text]
     StartCopyList = erlang:monotonic_time(millisecond), 
     CopyLists = be_utils:batch_pmap(
         fun(G) ->
