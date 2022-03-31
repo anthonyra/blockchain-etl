@@ -41,7 +41,6 @@
 
 -define(HANDLER_MODULES, [
     be_db_block,
-    be_db_txn_actor,
     be_db_account,
     be_db_gateway,
     be_db_oracle_price,
