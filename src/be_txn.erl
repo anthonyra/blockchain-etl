@@ -66,7 +66,7 @@ format_gateways_for_copy(Gateway, Height, Time, Ledger) ->
                     blockchain_ledger_gateway_v2:gain(GW),
                     ?MAYBE_H3(?MAYBE_FN(fun be_utils:calculate_location_hex/1, Location)),
                     Mode
-                ]
+                ];
         {error, _} ->
             []
     end.
