@@ -237,8 +237,8 @@ q_insert_transactions(Block, Ledger, #state{}) ->
     Pmap.
 
 q_copy_transactions(Block, Ledger) ->
-    Height = blockchain_block_v1:height(Block),
     Txns = blockchain_block_v1:transactions(Block),
+    JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
     Start0 = erlang:monotonic_time(millisecond),
     CopyLists = be_utils:batch_pmap(
         fun(L) ->
