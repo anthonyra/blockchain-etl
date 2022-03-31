@@ -404,9 +404,7 @@ consensus_failure_members() ->
                             [TxnHash, Height]
                         ),
                         %% Re-insert actors
-                        ActorQueries =
-                            be_db_txn_actor:q_insert_transaction_actors(Height, Txn),
-                        ok = ?BATCH_QUERY(Conn, ActorQueries)
+                        be_db_txn_actor:q_copy_transaction_actors(Height, Txn)
                     end,
                     Txns
                 ),
