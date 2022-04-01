@@ -18,9 +18,6 @@
          copy_list/2,
          with_transaction/1, with_connection/1]).
 
-%%standardize timeout with poolboy
--define(TIMEOUT, 5000).
-
 -record(state,
         {
          db_conn :: epgsql:connection(),
@@ -101,13 +98,7 @@ with_connection(Fun) ->
 copy_list(Config, List) ->
     poolboy:transaction(?DB_POOL,
                         fun(Worker) ->
-                                gen_server:call(Worker, {copy_list, Config, List}, ?TIMEOUT),
-                                receive
-                                    Res ->
-                                        lager:info("Copy Response: ~p", [Res])
-                                after ?TIMEOUT ->
-                                        timeout
-                                end
+                                gen_server:call(Worker, {copy_list, Config, List}, infinity),
                         end).
 
 -spec copy_list({TableString::string, Format::list()}, List::list(), Conn::epgsql:connection()) -> ok.
@@ -122,7 +113,7 @@ copy_list({TableString, Format}, List, Conn) ->
             case epgsql:copy_send_rows(
                 Conn,
                 List,
-                ?TIMEOUT
+                infinity
             ) of
                 ok ->
                     case epgsql:copy_done(Conn) of
