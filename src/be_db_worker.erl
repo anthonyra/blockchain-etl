@@ -98,7 +98,7 @@ with_connection(Fun) ->
 copy_list(Config, List) ->
     poolboy:transaction(?DB_POOL,
                         fun(Worker) ->
-                                gen_server:call(Worker, {copy_list, Config, List}, infinity),
+                                gen_server:call(Worker, {copy_list, Config, List}, infinity)
                         end).
 
 -spec copy_list({TableString::string, Format::list()}, List::list(), Conn::epgsql:connection()) -> ok.
