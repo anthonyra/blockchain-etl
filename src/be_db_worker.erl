@@ -98,7 +98,13 @@ with_connection(Fun) ->
 copy_list(Config, List) ->
     poolboy:transaction(?DB_POOL,
                         fun(Worker) ->
-                                gen_server:call(Worker, {copy_list, Config, List}, infinity)
+                                gen_server:call(Worker, {copy_list, Config, List}, infinity),
+                                receive
+                                    Res ->
+                                        lager:info("Copy Response: ~p", [Res])
+                                after infinity ->
+                                        timeout
+                                end
                         end).
 
 -spec copy_list({TableString::string, Format::list()}, List::list(), Conn::epgsql:connection()) -> ok.
@@ -121,12 +127,6 @@ copy_list({TableString, Format}, List, Conn) ->
             end;
         {error, Error} ->
             throw({error, Error})
-    end,
-    receive
-        Res ->
-            lager:info("Copy Response: ~p", [Res])
-    after infinity ->
-            timeout
     end.
 
 start_link(Args) ->
@@ -158,8 +158,8 @@ handle_call({prepared_query, Name, Params}, _From, #state{db_conn=Conn, prepared
     {reply, prepared_query({Stmts, Conn}, Name, Params), State};
 handle_call({batch_query, Batch}, _From, #state{db_conn=Conn, prepared_statements=Stmts}=State) ->
     {reply, batch_query({Stmts, Conn}, Batch), State};
-handle_call({copy_list, Type, List}, _From, #state{db_conn=Conn}=State) ->
-    {reply, copy_list(Type, List, Conn), State};
+handle_call({copy_list, Config, List}, _From, #state{db_conn=Conn}=State) ->
+    {reply, copy_list(Config, List, Conn), State};
 handle_call({with_transaction, Fun}, _From, #state{db_conn=Conn, prepared_statements=Stmts}=State) ->
     TransactionFun = fun(_) ->
                              Fun({Stmts, Conn})
