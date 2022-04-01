@@ -111,9 +111,6 @@ load_block(Conn, Hash, Block, _Sync, Ledger, State = #state{}) ->
     End1 = erlang:monotonic_time(millisecond),
     lager:info("Batch query flight time took ~p ms", [End1 - Start1]),
     maybe_write_snapshot(Block, blockchain_worker:blockchain()),
-     %% Seperate the queries to avoid the batches getting too big
-    q_json_transactions(Block, Ledger),
-    q_b64_transactions(Block),
     {ok, State#state{height = BlockHeight}}.
 
 %%
@@ -195,7 +192,8 @@ q_insert_block(Hash, Block, Ledger, State = #state{base_secs = BaseSecs}) ->
     [
         {?S_INSERT_BLOCK, Params}
         | q_insert_signatures(Block, State) ++
-            q_insert_transactions(Block, Ledger, State)
+          q_insert_transactions(Block, Ledger, State) ++
+          q_json_transactions(Block, Ledger)
     ].
 
 %% Performance tests show this isn't the bottleneck
