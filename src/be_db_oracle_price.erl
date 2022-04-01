@@ -30,7 +30,10 @@ prepare_conn(Conn) ->
         epgsql:parse(
             Conn,
             ?S_ORACLE_PRICE_INSERT,
-            ["insert into oracle_prices (block, price) values ($1, $2)"],
+            [
+                "insert into oracle_prices (block, price) values ($1, $2)",
+                "on conflict do nothing"
+            ],
             []
         ),
 
@@ -38,7 +41,10 @@ prepare_conn(Conn) ->
         epgsql:parse(
             Conn,
             ?S_ORACLE_PRICE_PREDICTION_INSERT,
-            ["insert into oracle_price_predictions (price, time) values ($1, $2)"],
+            [
+                "insert into oracle_price_predictions (price, time) values ($1, $2)",
+                "on conflict do nothing"
+            ],
             []
         ),
 

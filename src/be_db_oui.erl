@@ -33,7 +33,8 @@ prepare_conn(Conn) ->
                 "$3 as owner, ",
                 "$4 as nonce, ",
                 "$5 as addresses, ",
-                "$6 as subnets "
+                "$6 as subnets ",
+                "on conflict do nothing"
             ],
             []
         ),

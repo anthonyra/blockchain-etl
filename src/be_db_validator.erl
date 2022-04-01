@@ -38,7 +38,8 @@ prepare_conn(Conn) ->
                 "$8 as last_heartbeat, "
                 "$9 as version_heartbeat, "
                 "$10 as penalty, "
-                "$11 as penalties "
+                "$11 as penalties ",
+                "on conflict do nothing"
             ],
             []
         ),

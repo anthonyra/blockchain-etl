@@ -30,7 +30,8 @@ prepare_conn(Conn) ->
             [
                 "insert into rewards (block, transaction_hash, time, account, gateway, amount, type) ",
                 "values  ",
-                be_utils:make_values_list(7, Rows)
+                be_utils:make_values_list(7, Rows),
+                "on conflict do nothing"
             ],
             []
         )

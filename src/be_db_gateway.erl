@@ -43,7 +43,8 @@ prepare_conn(Conn) ->
                 "$12 as elevation, ",
                 "$13 as gain, ",
                 "$14 as location_hex, ",
-                "$15 as mode; "
+                "$15 as mode",
+                "on conflict do nothing"
             ],
             []
         ),
