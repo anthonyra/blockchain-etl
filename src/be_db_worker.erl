@@ -121,6 +121,12 @@ copy_list({TableString, Format}, List, Conn) ->
             end;
         {error, Error} ->
             throw({error, Error})
+    end,
+    receive
+        {epgsql, C, {error, Err}} ->
+            lager:info("Copy Error: ~p", [Err])
+    after infinity ->
+            timeout
     end.
 
 start_link(Args) ->
