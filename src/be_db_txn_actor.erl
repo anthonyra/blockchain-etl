@@ -425,3 +425,4 @@ to_actors(blockchain_txn_consensus_group_failure_v1, T) ->
      || M <- blockchain_txn_consensus_group_failure_v1:failed_members(T)
     ],
     Members ++ FailedMembers.
+

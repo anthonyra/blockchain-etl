@@ -46,8 +46,9 @@ prepare_conn(Conn) ->
             [
                 "insert into blocks ",
                 "(created_at, height, time, timestamp, prev_hash, block_hash, transaction_count, ",
-                " hbbft_round, election_epoch, epoch_start, rescue_signature, snapshot_hash) ",
-                "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);"
+                "hbbft_round, election_epoch, epoch_start, rescue_signature, snapshot_hash) ",
+                "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+                "on conflict do nothing"
             ],
             []
         ),
@@ -55,7 +56,10 @@ prepare_conn(Conn) ->
         epgsql:parse(
             Conn,
             ?S_INSERT_BLOCK_SIG,
-            "insert into block_signatures (block, signer, signature) values ($1, $2, $3)",
+            [
+                "insert into block_signatures (block, signer, signature) values ($1, $2, $3)",
+                "on conflict do nothing"
+            ],
             []
         ),
     {ok, S3} =
