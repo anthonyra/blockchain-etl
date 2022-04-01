@@ -123,8 +123,8 @@ copy_list({TableString, Format}, List, Conn) ->
             throw({error, Error})
     end,
     receive
-        {epgsql, Conn, {error, Err}} ->
-            lager:info("Copy Error: ~p", [Err])
+        Res ->
+            lager:info("Copy Response: ~p", [Res])
     after infinity ->
             timeout
     end.
