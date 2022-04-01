@@ -125,7 +125,12 @@ copy_list({TableString, Format}, List, Conn) ->
                 ?TIMEOUT
             ) of
                 ok ->
-                    epgsql:copy_done(Conn);
+                    case epgsql:copy_done(Conn) of
+                       {ok, Count} ->
+                           lager:info("Copy completed, ~p rows added", [Count]);
+                        {error, Error} ->
+                             throw({error, Error})
+                    end;
                 {error, Error} ->
                     throw({error, Error})
             end;
