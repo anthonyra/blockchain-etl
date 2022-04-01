@@ -38,16 +38,9 @@ prepare_conn(Conn) ->
             Conn,
             ?S_ACCOUNT_INSERT,
             [
-                "insert into accounts (block, address, dc_balance, dc_nonce, security_balance, security_nonce, balance, staked_balance, nonce) select ",
-                "$1 as block, ",
-                "$2 as address, ",
-                "$3 as dc_balance, ",
-                "$4 as dc_nonce, ",
-                "$5 as security_balance, ",
-                "$6 as security_nonce, ",
-                "$7 as balance, ",
-                "$8 as staked_balance, ",
-                "$9 as nonce"
+                "insert into accounts (block, address, dc_balance, dc_nonce, security_balance, security_nonce, balance, staked_balance, nonce) ",
+                "values ($1, $2, $3, $4, $5, $6, $7, $8, $9) ",
+                "on conflict do nothing"
             ],
             []
         ),

@@ -28,22 +28,9 @@ prepare_conn(Conn) ->
             Conn,
             ?S_INSERT_GATEWAY,
             [
-                "insert into gateways (block, time, address, owner, location, last_poc_challenge, last_poc_onion_key_hash, witnesses, nonce, name, reward_scale, elevation, gain, location_hex, mode) select ",
-                "$1 as block, ",
-                "$2 as time, ",
-                "$3 as address, ",
-                "$4 as owner, ",
-                "$5 as location, ",
-                "$6 as last_poc_challenge, ",
-                "$7 as last_poc_onion_key_hash, ",
-                "$8 as witnesses, ",
-                "$9 as nonce, ",
-                "$10 as name, ",
-                "$11 as reward_scale, ",
-                "$12 as elevation, ",
-                "$13 as gain, ",
-                "$14 as location_hex, ",
-                "$15 as mode; "
+                "insert into gateways (block, time, address, owner, location, last_poc_challenge, last_poc_onion_key_hash, witnesses, nonce, name, reward_scale, elevation, gain, location_hex, mode) ",
+                "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) ",
+                "on conflict do nothing"
             ],
             []
         ),
