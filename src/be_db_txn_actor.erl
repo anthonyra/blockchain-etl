@@ -13,7 +13,7 @@
 %% be_block_handler
 -export([init/1, load_block/6]).
 %% api
--export([to_actors/1, q_insert_transaction_actors/2, q_copy_transaction_actors/1]).
+-export([to_actors/1, q_insert_transaction_actors/2, q_copy_transaction_actors/1, q_copy_transaction_actors/2]).
 
 -define(S_INSERT_ACTOR, "insert_actor").
 -define(S_INSERT_ACTOR_10, "insert_actor_10").
