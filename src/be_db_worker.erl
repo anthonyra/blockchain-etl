@@ -115,6 +115,7 @@ copy_list({TableString, Format}, List, Conn) ->
         {binary, Format}
     ) of
         {ok, _} ->
+            lager:info("Copy mode enabled, send the rows to DB"),
             case epgsql:copy_send_rows(
                 Conn,
                 List,
