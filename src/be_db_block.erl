@@ -13,6 +13,7 @@
 -export([init/1, load_block/6]).
 %% api
 -export([block_height/1, maybe_write_snapshot/2]).
+-export([q_copy_transactions/2]).
 
 -define(S_BLOCK_HEIGHT, "block_height").
 -define(S_INSERT_BLOCK, "insert_block").
@@ -102,14 +103,8 @@ load_block(Conn, Hash, Block, _Sync, Ledger, State = #state{}) ->
         State#state.height + 1,
         "New block must line up with stored height"
     ),
-    Start0 = erlang:monotonic_time(millisecond),
     BlockQueries = q_insert_block(Hash, Block, Ledger, State),
-    End0 = erlang:monotonic_time(millisecond),
-    lager:info("Building block queries took ~p ms", [End0 - Start0]),
-    Start1 = erlang:monotonic_time(millisecond),
     ok = ?BATCH_QUERY(Conn, BlockQueries),
-    End1 = erlang:monotonic_time(millisecond),
-    lager:info("Batch query flight time took ~p ms", [End1 - Start1]),
     maybe_write_snapshot(Block, blockchain_worker:blockchain()),
     {ok, State#state{height = BlockHeight}}.
 
@@ -192,8 +187,7 @@ q_insert_block(Hash, Block, Ledger, State = #state{base_secs = BaseSecs}) ->
     [
         {?S_INSERT_BLOCK, Params}
         | q_insert_signatures(Block, State) ++
-          q_insert_transactions(Block, Ledger, State) ++
-          q_json_transactions(Block, Ledger)
+          q_insert_transactions(Block, Ledger, State)
     ].
 
 %% Performance tests show this isn't the bottleneck
@@ -239,9 +233,9 @@ q_insert_transactions(Block, Ledger, #state{}) ->
     Pmap.
 
 q_copy_transactions(Block, Ledger) ->
+    Start0 = erlang:monotonic_time(millisecond),
     Txns = blockchain_block_v1:transactions(Block),
     JsonOpts = [{ledger, Ledger}, {chain, blockchain_worker:blockchain()}],
-    Start0 = erlang:monotonic_time(millisecond),
     CopyLists = be_utils:batch_pmap(
         fun(L) ->
             be_txn:to_copy_list(L, Block, JsonOpts)
@@ -250,7 +244,7 @@ q_copy_transactions(Block, Ledger) ->
     ),
     ?COPY_LIST(?COPY_ACTOR_CONFIG, CopyLists),
     End0 = erlang:monotonic_time(millisecond),
-    lager:info("Txn Actors copy list took ~p ms. CopyLists (~p)", [End0 - Start0, length(CopyLists)]).
+    lager:info("Txns copy list took ~p ms. CopyLists (~p)", [End0 - Start0, length(CopyLists)]).
 
 q_json_transactions(Block, Ledger) ->
     Txns = blockchain_block_v1:transactions(Block),

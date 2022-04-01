@@ -13,7 +13,7 @@
 %% be_block_handler
 -export([init/1, load_block/6]).
 %% api
--export([to_actors/1, q_insert_transaction_actors/2, q_copy_transaction_actors/2]).
+-export([to_actors/1, q_insert_transaction_actors/2, q_copy_transaction_actors/1]).
 
 -define(S_INSERT_ACTOR, "insert_actor").
 -define(S_INSERT_ACTOR_10, "insert_actor_10").
@@ -59,7 +59,6 @@ init(_) ->
 load_block(Conn, _Hash, Block, _Sync, _Ledger, State = #state{}) ->
     Queries = q_insert_block_transaction_actors(Block),
     execute_queries(Conn, Queries),
-    q_copy_transaction_actors(Block),
     {ok, State}.
 
 execute_queries(Conn, Queries) when length(Queries) > 100 ->
@@ -112,6 +111,7 @@ q_copy_transaction_actors(Block) ->
     q_copy_transaction_actors(Height, Txns).
 
 q_copy_transaction_actors(Height, T) ->
+    Start0 = erlang:monotonic_time(millisecond),
     Txns = case is_list(T) of
         true -> T;
         false -> [T]
@@ -122,7 +122,9 @@ q_copy_transaction_actors(Height, T) ->
         end,
         Txns
     ),
-    ?COPY_LIST(?COPY_ACTOR_CONFIG, CopyLists).
+    ?COPY_LIST(?COPY_ACTOR_CONFIG, CopyLists),
+    End0 = erlang:monotonic_time(millisecond),
+    lager:info("Txn actors copy list took ~p ms. CopyLists (~p)", [End0 - Start0, length(CopyLists)]).
 
 -spec to_actors(blockchain_txn:txn()) -> [{string(), libp2p_crypto:pubkey_bin()}].
 to_actors(T) ->

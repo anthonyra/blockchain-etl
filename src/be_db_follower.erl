@@ -105,6 +105,8 @@ load_block(Hash, Block, Sync, Ledger, State = #state{}) ->
     {ok, HandlerStates} = ?WITH_TRANSACTION(LoadFun),
     End = erlang:monotonic_time(millisecond),
     lager:info("Stored block: ~p took: ~p ms", [blockchain_block_v1:height(Block), End - Start]),
+    be_db_block:q_copy_transactions(Block, Ledger),
+    be_db_txn_actor:q_copy_transaction_actors(Block),
     {ok, #state{handler_state = HandlerStates}}.
 
 terminate(_Reason, _State) ->
